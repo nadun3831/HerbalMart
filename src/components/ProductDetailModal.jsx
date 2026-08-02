@@ -1,212 +1,139 @@
 import React, { useState } from 'react';
 import { useStore } from '../data/store';
-import { X, Star, ShoppingBag, CheckCircle, ShieldCheck, HeartPulse, Leaf, Sparkles } from 'lucide-react';
+import { X, Star, ShoppingCart, CheckCircle, Leaf, Shield, HeartPulse, Plus, Minus } from 'lucide-react';
 
 export const ProductDetailModal = () => {
-  const { selectedProduct, isProductModalOpen, setIsProductModalOpen, addToCart } = useStore();
-  const [activeTab, setActiveTab] = useState('ingredients'); // 'ingredients' | 'usage' | 'benefits'
-  const [qty, setQty] = useState(1);
+  const { selectedProduct, setSelectedProduct, addToCart } = useStore();
+  const [activeTab, setActiveTab] = useState('ingredients');
+  const [quantity, setQuantity] = useState(1);
 
-  if (!isProductModalOpen || !selectedProduct) return null;
+  if (!selectedProduct) return null;
 
-  const hasDiscount = selectedProduct.discount_price && selectedProduct.discount_price < selectedProduct.price;
-  const isOutOfStock = selectedProduct.stock_qty <= 0;
+  const currentPrice = selectedProduct.discountPrice || selectedProduct.price;
+
+  const handleAddToCart = () => {
+    for (let i = 0; i < quantity; i++) {
+      addToCart(selectedProduct);
+    }
+    setSelectedProduct(null);
+  };
 
   return (
-    <div className="modal-overlay animate-fade-in" onClick={() => setIsProductModalOpen(false)}>
-      <div
-        className="modal-content relative p-6 sm:p-8"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <div className="modal-overlay">
+      <div className="modal-content relative p-6 sm:p-8 space-y-6">
+        
         {/* Close Button */}
         <button
-          onClick={() => setIsProductModalOpen(false)}
-          className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 p-2 rounded-full transition-colors"
+          onClick={() => setSelectedProduct(null)}
+          className="absolute top-6 right-6 p-2 text-slate-400 hover:text-white rounded-xl hover:bg-white/10"
         >
           <X size={20} />
         </button>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
           
-          {/* Image Side */}
-          <div>
-            <div className="aspect-square bg-emerald-50 rounded-2xl overflow-hidden border border-emerald-100 shadow-inner relative">
-              <img
-                src={selectedProduct.image}
-                alt={selectedProduct.name}
-                className="w-full h-full object-cover"
-              />
-              {hasDiscount && (
-                <span className="absolute top-4 left-4 badge-discount font-bold text-sm px-3 py-1">
-                  OFFER SPECIAL
-                </span>
-              )}
-            </div>
-
-            {/* Quick Trust Tags */}
-            <div className="grid grid-cols-2 gap-2 mt-4 text-[11px] text-slate-600 font-semibold">
-              <div className="flex items-center gap-1.5 p-2 bg-emerald-50/80 rounded-lg text-emerald-900 border border-emerald-100">
-                <ShieldCheck size={16} className="text-emerald-700" /> 100% Organic Formula
-              </div>
-              <div className="flex items-center gap-1.5 p-2 bg-emerald-50/80 rounded-lg text-emerald-900 border border-emerald-100">
-                <Sparkles size={16} className="text-emerald-700" /> Lab Tested & Certified
-              </div>
-            </div>
+          {/* Product Image */}
+          <div className="md:col-span-5 aspect-square rounded-2xl overflow-hidden bg-emerald-950/60 border border-white/10">
+            <img src={selectedProduct.image} alt={selectedProduct.name} className="w-full h-full object-cover" />
           </div>
 
-          {/* Info Side */}
-          <div className="flex flex-col h-full justify-between">
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <span className="badge-herbal uppercase tracking-wider text-[10px]">
-                  {selectedProduct.category_id}
-                </span>
-                <span className="text-xs text-slate-400">SKU: {selectedProduct.sku}</span>
+          {/* Details */}
+          <div className="md:col-span-7 space-y-4 flex flex-col justify-between">
+            <div className="space-y-3">
+              <span className="text-xs font-mono text-lime-400 uppercase tracking-wider">{selectedProduct.category}</span>
+              <h2 className="text-2xl font-bold text-white">{selectedProduct.name}</h2>
+              
+              <div className="flex items-center gap-2 text-xs">
+                <div className="flex text-amber-400">
+                  <Star size={14} className="fill-amber-400" />
+                </div>
+                <span className="font-bold text-white">{selectedProduct.rating}</span>
+                <span className="text-slate-400">({selectedProduct.reviewsCount} customer reviews)</span>
               </div>
 
-              <h2 className="font-heading font-bold text-2xl text-emerald-950 mb-2 leading-tight">
-                {selectedProduct.name}
-              </h2>
-
-              <div className="flex items-center gap-4 mb-4 text-xs">
-                <div className="flex items-center gap-1 text-amber-500 font-bold">
-                  <Star size={16} className="fill-amber-400 text-amber-400" />
-                  <span>{selectedProduct.rating}</span>
-                  <span className="text-slate-400 font-normal">({selectedProduct.reviews_count} customer reviews)</span>
-                </div>
-                <span className="text-slate-300">|</span>
-                <span className="text-slate-600 font-semibold">{selectedProduct.unit}</span>
+              <div className="flex items-baseline gap-3 pt-2 font-mono">
+                <span className="text-2xl font-bold text-lime-400">Rs. {currentPrice.toLocaleString()}</span>
+                {selectedProduct.discountPrice && (
+                  <span className="text-sm text-slate-500 line-through">Rs. {selectedProduct.price.toLocaleString()}</span>
+                )}
               </div>
 
-              {/* Price & Discount Box */}
-              <div className="bg-emerald-50/60 p-4 rounded-xl border border-emerald-100 mb-6 flex items-center justify-between">
-                <div>
-                  <div className="text-[11px] text-emerald-800 font-semibold uppercase">Regular & Discounted Price</div>
-                  <div className="flex items-baseline gap-3 mt-1">
-                    {hasDiscount ? (
-                      <>
-                        <span className="text-2xl font-black text-emerald-950">
-                          Rs. {selectedProduct.discount_price.toLocaleString('en-LK', { minimumFractionDigits: 2 })}
-                        </span>
-                        <span className="text-sm text-slate-400 line-through font-medium">
-                          Rs. {selectedProduct.price.toLocaleString('en-LK', { minimumFractionDigits: 2 })}
-                        </span>
-                      </>
-                    ) : (
-                      <span className="text-2xl font-black text-emerald-950">
-                        Rs. {selectedProduct.price.toLocaleString('en-LK', { minimumFractionDigits: 2 })}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-xs font-bold text-emerald-900">
-                    {isOutOfStock ? (
-                      <span className="text-red-600">Out of Stock</span>
-                    ) : (
-                      <span className="text-emerald-700">{selectedProduct.stock_qty} available in stock</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Detail Tabs */}
-              <div className="mb-6">
-                <div className="flex border-b border-slate-200 text-xs font-bold gap-4 mb-3">
-                  <button
-                    onClick={() => setActiveTab('ingredients')}
-                    className={`pb-2 border-b-2 transition-colors ${
-                      activeTab === 'ingredients'
-                        ? 'border-emerald-800 text-emerald-900'
-                        : 'border-transparent text-slate-400 hover:text-slate-600'
-                    }`}
-                  >
-                    Key Ingredients
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('usage')}
-                    className={`pb-2 border-b-2 transition-colors ${
-                      activeTab === 'usage'
-                        ? 'border-emerald-800 text-emerald-900'
-                        : 'border-transparent text-slate-400 hover:text-slate-600'
-                    }`}
-                  >
-                    How to Use
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('benefits')}
-                    className={`pb-2 border-b-2 transition-colors ${
-                      activeTab === 'benefits'
-                        ? 'border-emerald-800 text-emerald-900'
-                        : 'border-transparent text-slate-400 hover:text-slate-600'
-                    }`}
-                  >
-                    Ayurvedic Benefits
-                  </button>
-                </div>
-
-                <div className="text-xs text-slate-600 leading-relaxed min-h-[70px]">
-                  {activeTab === 'ingredients' && (
-                    <div className="bg-white p-3 rounded-lg border border-slate-100">
-                      <p className="font-medium text-slate-800">{selectedProduct.ingredients}</p>
-                    </div>
-                  )}
-
-                  {activeTab === 'usage' && (
-                    <div className="bg-white p-3 rounded-lg border border-slate-100">
-                      <p className="font-medium text-slate-800">{selectedProduct.usage_info}</p>
-                    </div>
-                  )}
-
-                  {activeTab === 'benefits' && (
-                    <ul className="space-y-1.5">
-                      {selectedProduct.health_benefits?.map((benefit, i) => (
-                        <li key={i} className="flex items-center gap-2 text-slate-800 font-medium">
-                          <CheckCircle size={14} className="text-emerald-600 shrink-0" />
-                          <span>{benefit}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              </div>
-
+              <p className="text-xs text-slate-300 leading-relaxed">{selectedProduct.shortDescription}</p>
             </div>
 
-            {/* Quantity Selector & Add to Cart */}
-            <div className="pt-4 border-t border-slate-100 flex items-center gap-4">
-              <div className="flex items-center border border-slate-200 rounded-xl overflow-hidden bg-slate-50">
-                <button
-                  onClick={() => setQty((q) => Math.max(1, q - 1))}
-                  className="px-3 py-2 text-slate-600 hover:bg-slate-200 font-bold"
-                >
-                  -
-                </button>
-                <span className="px-4 py-2 text-xs font-bold text-slate-800">{qty}</span>
-                <button
-                  onClick={() => setQty((q) => Math.min(selectedProduct.stock_qty, q + 1))}
-                  className="px-3 py-2 text-slate-600 hover:bg-slate-200 font-bold"
-                >
-                  +
+            {/* Quantity & Add Button */}
+            <div className="space-y-4 pt-4 border-t border-white/10">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3 bg-[#101415] border border-white/15 px-3 py-2 rounded-xl text-xs">
+                  <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="hover:text-lime-400">
+                    <Minus size={14} />
+                  </button>
+                  <span className="font-mono font-bold w-6 text-center text-white">{quantity}</span>
+                  <button onClick={() => setQuantity(quantity + 1)} className="hover:text-lime-400">
+                    <Plus size={14} />
+                  </button>
+                </div>
+
+                <button onClick={handleAddToCart} className="flex-1 btn-primary py-3 text-xs font-bold">
+                  <ShoppingCart size={16} /> Add {quantity} to Cart
                 </button>
               </div>
-
-              <button
-                onClick={() => {
-                  addToCart(selectedProduct, qty);
-                  setIsProductModalOpen(false);
-                }}
-                disabled={isOutOfStock}
-                className="flex-1 btn-primary py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2"
-              >
-                <ShoppingBag size={18} />
-                {isOutOfStock ? 'Currently Unavailable' : `Add ${qty} to Cart`}
-              </button>
             </div>
 
           </div>
 
         </div>
+
+        {/* Tabbed Info (Ingredients, Usage, Health Benefits) */}
+        <div className="pt-6 border-t border-white/10 space-y-4">
+          <div className="flex gap-4 border-b border-white/10 pb-2 text-xs font-bold">
+            <button
+              onClick={() => setActiveTab('ingredients')}
+              className={`pb-2 border-b-2 transition-colors ${
+                activeTab === 'ingredients' ? 'border-lime-400 text-lime-400' : 'border-transparent text-slate-400'
+              }`}
+            >
+              🌿 Active Ingredients
+            </button>
+            <button
+              onClick={() => setActiveTab('usage')}
+              className={`pb-2 border-b-2 transition-colors ${
+                activeTab === 'usage' ? 'border-lime-400 text-lime-400' : 'border-transparent text-slate-400'
+              }`}
+            >
+              📋 Usage Directions
+            </button>
+            <button
+              onClick={() => setActiveTab('benefits')}
+              className={`pb-2 border-b-2 transition-colors ${
+                activeTab === 'benefits' ? 'border-lime-400 text-lime-400' : 'border-transparent text-slate-400'
+              }`}
+            >
+              💚 Ayurvedic Benefits
+            </button>
+          </div>
+
+          <div className="text-xs text-slate-300 leading-relaxed">
+            {activeTab === 'ingredients' && (
+              <div className="flex flex-wrap gap-2">
+                {selectedProduct.ingredients.map((ing, idx) => (
+                  <span key={idx} className="bg-[#101415] border border-white/15 px-3 py-1 rounded-lg font-mono text-lime-300">
+                    {ing}
+                  </span>
+                ))}
+              </div>
+            )}
+            {activeTab === 'usage' && <p>{selectedProduct.usageInstructions}</p>}
+            {activeTab === 'benefits' && (
+              <ul className="space-y-1.5 list-disc list-inside">
+                {selectedProduct.healthBenefits.map((b, idx) => (
+                  <li key={idx}>{b}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+
       </div>
     </div>
   );

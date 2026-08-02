@@ -1,58 +1,88 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { INITIAL_PRODUCTS, INITIAL_CATEGORIES, INITIAL_DISCOUNTS, INITIAL_ORDERS } from './initialData';
+import { INITIAL_PRODUCTS, INITIAL_CATEGORIES, INITIAL_DISCOUNTS, INITIAL_ORDERS, SALES_ANALYTICS_DATA, USER_PROFILE_DATA } from './initialData';
 
 const StoreContext = createContext();
+const DATA_VERSION = '2';
 
 export const StoreProvider = ({ children }) => {
-  // Role State: 'customer' or 'admin'
+  // Clear stale localStorage if data schema has changed
+  if (localStorage.getItem('herbal_data_version') !== DATA_VERSION) {
+    localStorage.removeItem('herbal_products');
+    localStorage.removeItem('herbal_discounts');
+    localStorage.removeItem('herbal_orders');
+    localStorage.removeItem('herbal_cart');
+    localStorage.setItem('herbal_data_version', DATA_VERSION);
+  }
+
+  const [isLoggedIn, setIsLoggedIn] = useState(() => localStorage.getItem('herbal_logged_in') === 'true');
+  const [loggedInUser, setLoggedInUser] = useState(() => {
+    try {
+      const saved = localStorage.getItem('herbal_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch { return null; }
+  });
   const [role, setRole] = useState(() => localStorage.getItem('herbal_role') || 'customer');
+  const [customerTab, setCustomerTab] = useState('store');
+  const [adminTab, setAdminTab] = useState('analytics');
 
-  // Active view tab for Customer or Admin
-  const [customerTab, setCustomerTab] = useState('store'); // 'store' | 'dashboard'
-  const [adminTab, setAdminTab] = useState('analytics'); // 'analytics' | 'products' | 'discounts' | 'orders'
-
-  // Products state with local storage fallback
   const [products, setProducts] = useState(() => {
-    const saved = localStorage.getItem('herbal_products');
-    return saved ? JSON.parse(saved) : INITIAL_PRODUCTS;
+    try {
+      const saved = localStorage.getItem('herbal_products');
+      return saved ? JSON.parse(saved) : INITIAL_PRODUCTS;
+    } catch {
+      return INITIAL_PRODUCTS;
+    }
   });
 
-  // Discounts state
   const [discounts, setDiscounts] = useState(() => {
-    const saved = localStorage.getItem('herbal_discounts');
-    return saved ? JSON.parse(saved) : INITIAL_DISCOUNTS;
+    try {
+      const saved = localStorage.getItem('herbal_discounts');
+      return saved ? JSON.parse(saved) : INITIAL_DISCOUNTS;
+    } catch {
+      return INITIAL_DISCOUNTS;
+    }
   });
 
-  // Orders state
   const [orders, setOrders] = useState(() => {
-    const saved = localStorage.getItem('herbal_orders');
-    return saved ? JSON.parse(saved) : INITIAL_ORDERS;
+    try {
+      const saved = localStorage.getItem('herbal_orders');
+      return saved ? JSON.parse(saved) : INITIAL_ORDERS;
+    } catch {
+      return INITIAL_ORDERS;
+    }
   });
 
-  // Cart state: Array of { product, qty }
   const [cart, setCart] = useState(() => {
-    const saved = localStorage.getItem('herbal_cart');
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem('herbal_cart');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
   });
 
-  // Applied Coupon code
   const [appliedCoupon, setAppliedCoupon] = useState(null);
-
-  // Active Product Modal (for detail view or edit)
   const [selectedProduct, setSelectedProduct] = useState(null);
-
-  // Active Modals
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
-  const [productModalMode, setProductModalMode] = useState('view'); // 'view' | 'add' | 'edit'
-
-  // Toast Notification system
   const [toast, setToast] = useState(null);
 
   useEffect(() => {
     localStorage.setItem('herbal_role', role);
   }, [role]);
+
+  useEffect(() => {
+    localStorage.setItem('herbal_logged_in', isLoggedIn ? 'true' : 'false');
+  }, [isLoggedIn]);
+
+  useEffect(() => {
+    if (loggedInUser) {
+      localStorage.setItem('herbal_user', JSON.stringify(loggedInUser));
+    } else {
+      localStorage.removeItem('herbal_user');
+    }
+  }, [loggedInUser]);
 
   useEffect(() => {
     localStorage.setItem('herbal_products', JSON.stringify(products));
@@ -70,61 +100,64 @@ export const StoreProvider = ({ children }) => {
     localStorage.setItem('herbal_cart', JSON.stringify(cart));
   }, [cart]);
 
-  const showToast = (message, type = 'success') => {
-    setToast({ message, type, id: Date.now() });
-    setTimeout(() => {
-      setToast(null);
-    }, 4000);
+  // Auth actions
+  const login = (userData) => {
+    setLoggedInUser(userData);
+    setRole(userData.role);
+    setIsLoggedIn(true);
+    setCustomerTab('store');
+    showToast(`Welcome back, ${userData.name}!`);
   };
 
-  // --- Cart Actions ---
+  const logout = () => {
+    setIsLoggedIn(false);
+    setLoggedInUser(null);
+    setRole('customer');
+    setCustomerTab('store');
+    localStorage.removeItem('herbal_logged_in');
+    localStorage.removeItem('herbal_user');
+    showToast('You have been logged out.', 'info');
+  };
+
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type, id: Date.now() });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  // Cart Actions
   const addToCart = (product, qty = 1) => {
-    if (product.stock_qty <= 0) {
-      showToast('Sorry, this product is currently out of stock!', 'error');
+    setCart((prev) => {
+      const existing = prev.find((item) => item.id === product.id);
+      if (existing) {
+        return prev.map((item) =>
+          item.id === product.id ? { ...item, quantity: item.quantity + qty } : item
+        );
+      }
+      return [...prev, { ...product, quantity: qty }];
+    });
+    showToast(`Added '${product.name}' to cart!`);
+  };
+
+  const updateCartQuantity = (productId, newQuantity) => {
+    if (newQuantity <= 0) {
+      removeFromCart(productId);
       return;
     }
-    setCart((prev) => {
-      const existingIndex = prev.findIndex((item) => item.product.id === product.id);
-      if (existingIndex > -1) {
-        const updated = [...prev];
-        const newQty = updated[existingIndex].qty + qty;
-        if (newQty > product.stock_qty) {
-          showToast(`Cannot add more than ${product.stock_qty} in stock!`, 'warning');
-          updated[existingIndex].qty = product.stock_qty;
-        } else {
-          updated[existingIndex].qty = newQty;
-          showToast(`Updated ${product.name} quantity in cart!`);
-        }
-        return updated;
-      } else {
-        showToast(`Added ${product.name} to cart!`);
-        return [...prev, { product, qty: Math.min(qty, product.stock_qty) }];
-      }
-    });
+    setCart((prev) =>
+      prev.map((item) => (item.id === productId ? { ...item, quantity: newQuantity } : item))
+    );
   };
 
   const updateCartQty = (productId, delta) => {
-    setCart((prev) => {
-      return prev
-        .map((item) => {
-          if (item.product.id === productId) {
-            const targetProd = products.find((p) => p.id === productId) || item.product;
-            const newQty = item.qty + delta;
-            if (newQty > targetProd.stock_qty) {
-              showToast(`Only ${targetProd.stock_qty} units available in stock!`, 'warning');
-              return item;
-            }
-            return newQty > 0 ? { ...item, qty: newQty } : null;
-          }
-          return item;
-        })
-        .filter(Boolean);
-    });
+    const existing = cart.find((item) => item.id === productId);
+    if (existing) {
+      updateCartQuantity(productId, existing.quantity + delta);
+    }
   };
 
   const removeFromCart = (productId) => {
-    setCart((prev) => prev.filter((item) => item.product.id !== productId));
-    showToast('Item removed from cart.');
+    setCart((prev) => prev.filter((item) => item.id !== productId));
+    showToast('Removed item from cart.', 'info');
   };
 
   const clearCart = () => {
@@ -132,150 +165,99 @@ export const StoreProvider = ({ children }) => {
     setAppliedCoupon(null);
   };
 
-  const applyCouponCode = (code) => {
-    const cleanCode = code.trim().toUpperCase();
-    const foundDiscount = discounts.find(
-      (d) => d.coupon_code && d.coupon_code.toUpperCase() === cleanCode && d.status === 'active'
-    );
-    if (foundDiscount) {
-      setAppliedCoupon(foundDiscount);
-      showToast(`Coupon '${cleanCode}' applied successfully! ${foundDiscount.value}% off`);
-      return true;
-    } else {
-      showToast('Invalid or expired coupon code.', 'error');
-      return false;
+  const applyCoupon = (code) => {
+    const clean = code.trim().toUpperCase();
+    const found = discounts.find((d) => (d.code === clean || d.coupon_code === clean) && d.active);
+    if (found) {
+      setAppliedCoupon(found);
+      showToast(`Coupon '${clean}' applied successfully!`);
+      return { success: true, message: 'Coupon applied!' };
     }
+    return { success: false, message: 'Invalid or expired coupon code.' };
   };
 
-  // --- Product Management (Admin) ---
-  const saveProduct = (productData) => {
-    if (productData.id) {
-      // Edit existing product
-      setProducts((prev) => prev.map((p) => (p.id === productData.id ? { ...p, ...productData } : p)));
-      showToast(`Product '${productData.name}' updated successfully!`);
-    } else {
-      // Add new product
-      const newProduct = {
-        ...productData,
-        id: `prod-${Date.now()}`,
-        status: 'active',
-        rating: 5.0,
-        reviews_count: 1
-      };
-      setProducts((prev) => [newProduct, ...prev]);
-      showToast(`New herbal product '${productData.name}' created!`);
-    }
-    setIsProductModalOpen(false);
-  };
+  const applyCouponCode = applyCoupon;
 
-  const deleteProduct = (productId) => {
-    const prod = products.find((p) => p.id === productId);
-    if (window.confirm(`Are you sure you want to deactivate/delete '${prod?.name}'?`)) {
-      setProducts((prev) => prev.filter((p) => p.id !== productId));
-      showToast(`Product '${prod?.name}' removed.`, 'info');
-    }
-  };
-
-  // --- Discount Engine (Admin) ---
-  const createDiscount = (discountData) => {
-    const newDiscount = {
-      ...discountData,
-      id: `disc-${Date.now()}`,
-      status: 'active'
+  // Product Actions
+  const addProduct = (newProd) => {
+    const created = {
+      ...newProd,
+      id: `prod-${Date.now()}`,
+      status: 'active',
+      stock_qty: newProd.stock,
+      discount_price: newProd.discountPrice
     };
-    setDiscounts((prev) => [newDiscount, ...prev]);
-    showToast(`Discount '${discountData.name}' created successfully!`);
+    setProducts((prev) => [created, ...prev]);
+    showToast(`Added '${newProd.name}' to catalog!`);
   };
 
-  const toggleDiscountStatus = (discountId) => {
-    setDiscounts((prev) =>
-      prev.map((d) => {
-        if (d.id === discountId) {
-          const nextStatus = d.status === 'active' ? 'disabled' : 'active';
-          showToast(`Discount '${d.name}' status set to ${nextStatus}`, 'info');
-          return { ...d, status: nextStatus };
-        }
-        return d;
-      })
-    );
-  };
-
-  const deleteDiscount = (discountId) => {
-    setDiscounts((prev) => prev.filter((d) => d.id !== discountId));
-    showToast('Discount removed.', 'info');
-  };
-
-  // --- Order & Checkout Actions ---
-  const placeOrder = (customerDetails, paymentMethod) => {
-    const subtotal = cart.reduce((sum, item) => sum + item.product.price * item.qty, 0);
-
-    // Calculate item discounts
-    let totalDiscount = 0;
-    const orderItems = cart.map((item) => {
-      const unitPrice = item.product.discount_price || item.product.price;
-      const originalPrice = item.product.price;
-      totalDiscount += (originalPrice - unitPrice) * item.qty;
-
-      // Apply coupon code if applicable
-      if (appliedCoupon && appliedCoupon.target === 'product' && appliedCoupon.target_id === item.product.id) {
-        const extraDisc = (unitPrice * appliedCoupon.value) / 100;
-        totalDiscount += extraDisc * item.qty;
-      }
-      return {
-        product_id: item.product.id,
-        name: item.product.name,
-        qty: item.qty,
-        price: unitPrice
-      };
-    });
-
-    // Reduce stock quantities
+  const updateProduct = (id, updatedFields) => {
     setProducts((prev) =>
-      prev.map((p) => {
-        const cartMatch = cart.find((item) => item.product.id === p.id);
-        if (cartMatch) {
-          return { ...p, stock_qty: Math.max(0, p.stock_qty - cartMatch.qty) };
-        }
-        return p;
-      })
+      prev.map((p) => (p.id === id ? { ...p, ...updatedFields } : p))
     );
-
-    const newOrder = {
-      id: `ORD-${Math.floor(1000 + Math.random() * 9000)}`,
-      customer: customerDetails,
-      items: orderItems,
-      total_amount: Math.max(0, subtotal - totalDiscount),
-      discount_amount: totalDiscount,
-      payment_method: paymentMethod,
-      status: 'Pending',
-      date: new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })
-    };
-
-    setOrders((prev) => [newOrder, ...prev]);
-    clearCart();
-    setIsCheckoutOpen(false);
-    showToast(`Order #${newOrder.id} placed successfully! Thank you for shopping with HerbalMart.`, 'success');
-
-    // Switch customer view to dashboard to track order
-    setCustomerTab('dashboard');
-    return newOrder;
+    showToast(`Updated product details!`);
   };
 
-  const updateOrderStatus = (orderId, newStatus) => {
-    setOrders((prev) =>
-      prev.map((o) => {
-        if (o.id === orderId) {
-          showToast(`Order #${orderId} status updated to '${newStatus}'`, 'info');
-          return { ...o, status: newStatus };
-        }
-        return o;
-      })
+  const saveProduct = (prodData) => {
+    if (prodData.id) {
+      updateProduct(prodData.id, prodData);
+    } else {
+      addProduct(prodData);
+    }
+  };
+
+  const deleteProduct = (id) => {
+    setProducts((prev) => prev.filter((p) => p.id !== id));
+    showToast('Product removed from catalog.', 'info');
+  };
+
+  // Discount Actions
+  const addDiscount = (disc) => {
+    const created = {
+      ...disc,
+      id: `disc-${Date.now()}`,
+      active: true,
+      status: 'active',
+      coupon_code: disc.code
+    };
+    setDiscounts((prev) => [created, ...prev]);
+    showToast(`Discount '${disc.code}' created!`);
+  };
+
+  const createDiscount = addDiscount;
+
+  const toggleDiscountStatus = (id) => {
+    setDiscounts((prev) =>
+      prev.map((d) => (d.id === id ? { ...d, active: !d.active, status: d.active ? 'disabled' : 'active' } : d))
     );
+  };
+
+  const deleteDiscount = (id) => {
+    setDiscounts((prev) => prev.filter((d) => d.id !== id));
+  };
+
+  // Order Actions
+  const addOrder = (order) => {
+    setOrders((prev) => [order, ...prev]);
+    showToast(`Order placed successfully!`, 'success');
+  };
+
+  const placeOrder = addOrder;
+
+  const updateOrderStatus = (orderId, status) => {
+    setOrders((prev) =>
+      prev.map((o) => (o.id === orderId ? { ...o, status } : o))
+    );
+    showToast(`Order #${orderId} status updated to '${status}'.`, 'info');
   };
 
   return (
     <StoreContext.Provider
       value={{
+        isLoggedIn,
+        loggedInUser,
+        login,
+        logout,
         role,
         setRole,
         customerTab,
@@ -285,6 +267,7 @@ export const StoreProvider = ({ children }) => {
         categories: INITIAL_CATEGORIES,
         products,
         discounts,
+        activeDiscounts: discounts.filter((d) => d.active || d.status === 'active'),
         orders,
         cart,
         appliedCoupon,
@@ -296,20 +279,26 @@ export const StoreProvider = ({ children }) => {
         setIsCheckoutOpen,
         isProductModalOpen,
         setIsProductModalOpen,
-        productModalMode,
-        setProductModalMode,
+        salesAnalytics: SALES_ANALYTICS_DATA,
+        userProfile: USER_PROFILE_DATA,
         toast,
         showToast,
         addToCart,
+        updateCartQuantity,
         updateCartQty,
         removeFromCart,
         clearCart,
+        applyCoupon,
         applyCouponCode,
+        addProduct,
+        updateProduct,
         saveProduct,
         deleteProduct,
+        addDiscount,
         createDiscount,
         toggleDiscountStatus,
         deleteDiscount,
+        addOrder,
         placeOrder,
         updateOrderStatus
       }}

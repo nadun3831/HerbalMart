@@ -1,214 +1,260 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useStore } from '../data/store';
 import { ProductCard } from '../components/ProductCard';
-import { Sparkles, Leaf, Search, Filter, ShieldCheck, HeartPulse, RefreshCw, Truck } from 'lucide-react';
+import { Sparkles, ShieldCheck, Truck, RotateCcw, Filter, ArrowUpDown, Tag } from 'lucide-react';
 
 export const CustomerStorefront = ({ searchQuery, setSearchQuery }) => {
-  const { products, categories, discounts } = useStore();
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [onlyDiscounts, setOnlyDiscounts] = useState(false);
-  const [sortBy, setSortBy] = useState('featured'); // 'featured' | 'price-low' | 'price-high' | 'rating'
+  const { products, categories, activeDiscounts, setSelectedProduct } = useStore();
+  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [sortBy, setSortBy] = useState('featured');
+  const [onlyDiscounted, setOnlyDiscounted] = useState(false);
 
-  // Filter logic
-  let filteredProducts = products.filter((product) => {
-    // Category match
-    const matchCategory = selectedCategory === 'all' || product.category_id === selectedCategory;
+  // Filter & Sort Logic
+  const filteredProducts = useMemo(() => {
+    return products
+      .filter((p) => p.status === 'active')
+      .filter((p) => {
+        const matchesCategory = selectedCategory === 'All' || p.category === selectedCategory;
+        const query = searchQuery.toLowerCase();
+        const nameMatch = (p.name || '').toLowerCase().includes(query);
+        const descMatch = (p.shortDescription || p.description || '').toLowerCase().includes(query);
+        const catMatch = (p.category || '').toLowerCase().includes(query);
+        const ingMatch = Array.isArray(p.ingredients)
+          ? p.ingredients.some((i) => (i || '').toLowerCase().includes(query))
+          : typeof p.ingredients === 'string'
+            ? p.ingredients.toLowerCase().includes(query)
+            : false;
+        const matchesSearch = !query || nameMatch || descMatch || catMatch || ingMatch;
+        const matchesDiscount = onlyDiscounted ? !!p.discountPrice : true;
+        return matchesCategory && matchesSearch && matchesDiscount;
+      })
+      .sort((a, b) => {
+        const priceA = a.discountPrice || a.price;
+        const priceB = b.discountPrice || b.price;
+        if (sortBy === 'price-low') return priceA - priceB;
+        if (sortBy === 'price-high') return priceB - priceA;
+        if (sortBy === 'rating') return b.rating - a.rating;
+        return b.featured ? 1 : -1;
+      });
+  }, [products, selectedCategory, searchQuery, sortBy, onlyDiscounted]);
 
-    // Search query match
-    const matchSearch =
-      product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.ingredients?.toLowerCase().includes(searchQuery.toLowerCase());
-
-    // Discount filter
-    const matchDiscount = !onlyDiscounts || (product.discount_price && product.discount_price < product.price);
-
-    return matchCategory && matchSearch && matchDiscount;
-  });
-
-  // Sorting
-  if (sortBy === 'price-low') {
-    filteredProducts.sort((a, b) => (a.discount_price || a.price) - (b.discount_price || b.price));
-  } else if (sortBy === 'price-high') {
-    filteredProducts.sort((a, b) => (b.discount_price || b.price) - (a.discount_price || a.price));
-  } else if (sortBy === 'rating') {
-    filteredProducts.sort((a, b) => b.rating - a.rating);
-  }
-
-  const activePromoBanner = discounts.find((d) => d.status === 'active');
+  const featuredDealProduct = products.find((p) => p.discountPrice && p.featured) || products[0];
 
   return (
-    <div className="space-y-10 pb-16">
+    <div className="space-y-12 pb-16">
       
-      {/* Hero Banner Section */}
-      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-950 via-emerald-900 to-emerald-950 text-white p-8 sm:p-12 shadow-2xl border border-emerald-800/40">
-        
-        {/* Background Decorative Pattern */}
-        <div className="absolute top-0 right-0 -translate-y-12 translate-x-12 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-1/3 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+      {/* Hero Banner Section - Stitch Exact Heading & Subtitle */}
+      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#064e3b] via-[#101415] to-[#1d2022] border border-white/15 p-8 md:p-12 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+        <div className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 rounded-full bg-lime-500/10 blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-96 h-96 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none" />
 
-        <div className="relative z-10 max-w-2xl">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-800/80 border border-emerald-700 text-emerald-300 text-xs font-bold mb-4 shadow-sm">
-            <Sparkles size={14} className="text-amber-400" /> Authentic Sri Lankan Ayurvedic Formulas
+        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+          
+          <div className="lg:col-span-7 space-y-6">
+            <div className="inline-flex items-center gap-2 bg-lime-500/10 border border-lime-500/30 text-lime-400 font-semibold text-xs px-3.5 py-1.5 rounded-full backdrop-blur-md">
+              <Sparkles size={14} /> 100% ORGANIC & AYURVEDIC CERTIFIED
+            </div>
+
+            <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-white tracking-tight leading-tight">
+              Purity meets <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-lime-400 via-emerald-300 to-teal-200">
+                Precision.
+              </span>
+            </h1>
+
+            <p className="text-slate-300 text-sm md:text-base leading-relaxed max-w-xl">
+              Discover our meticulously sourced, lab-tested herbal remedies. Nature's wisdom, distilled for your wellness journey.
+            </p>
+
+            <div className="flex flex-wrap gap-4 pt-2">
+              <a
+                href="#catalog"
+                className="btn-primary px-6 py-3 text-sm font-bold shadow-lg"
+              >
+                Explore Herbal Catalog
+              </a>
+              {activeDiscounts.length > 0 && (
+                <div className="bg-white/5 border border-white/10 backdrop-blur-md px-4 py-2.5 rounded-xl flex items-center gap-3 text-xs text-slate-200">
+                  <Tag size={16} className="text-lime-400" />
+                  <span>
+                    Use code <strong className="text-lime-400 font-mono font-bold">{activeDiscounts[0].code}</strong> for {activeDiscounts[0].percentage}% OFF
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Assurance Badges */}
+            <div className="grid grid-cols-3 gap-4 pt-6 border-t border-white/10 text-xs text-slate-300">
+              <div className="flex items-center gap-2">
+                <ShieldCheck size={18} className="text-lime-400 shrink-0" />
+                <span>100% Authentic</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Truck size={18} className="text-lime-400 shrink-0" />
+                <span>Islandwide Delivery</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <RotateCcw size={18} className="text-lime-400 shrink-0" />
+                <span>Quality Guaranteed</span>
+              </div>
+            </div>
           </div>
 
-          <h1 className="font-heading text-3xl sm:text-5xl font-extrabold tracking-tight text-white mb-4 leading-tight">
-            Pure Natural Vigor & <span className="text-amber-300 italic">Herbal Wellness</span>
-          </h1>
-
-          <p className="text-emerald-100/90 text-sm sm:text-base mb-8 leading-relaxed">
-            Discover hand-crafted herbal teas, hair growth elixirs, and organic root powders sourced directly from certified botanical gardens.
-          </p>
-
-          {/* Quick Active Promotional Spotlight */}
-          {activePromoBanner && (
-            <div className="bg-emerald-900/90 backdrop-blur-md border border-amber-500/40 p-4 rounded-2xl flex items-center justify-between gap-4 max-w-xl shadow-lg">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-amber-400 text-emerald-950 font-black flex items-center justify-center text-sm shrink-0">
-                  %{activePromoBanner.value}
+          {/* Featured Product Spotlight Card */}
+          {featuredDealProduct && (
+            <div className="lg:col-span-5">
+              <div className="glass-card rounded-2xl p-5 border border-lime-500/30 relative">
+                <div className="absolute top-3 right-3 bg-lime-500 text-emerald-950 font-bold text-[11px] px-2.5 py-1 rounded-md shadow-md">
+                  HOT DEAL
                 </div>
-                <div>
-                  <div className="text-xs font-bold text-amber-300 uppercase tracking-wider">Active Promotional Deal</div>
-                  <div className="text-xs text-white font-semibold">{activePromoBanner.name}</div>
+                <div className="aspect-video rounded-xl overflow-hidden mb-4 bg-emerald-950/60">
+                  <img
+                    src={featuredDealProduct.image}
+                    alt={featuredDealProduct.name}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <span className="text-[11px] font-mono text-lime-400 uppercase tracking-wider">{featuredDealProduct.category}</span>
+                  <h4 className="font-bold text-white text-lg">{featuredDealProduct.name}</h4>
+                  <p className="text-xs text-slate-300 line-clamp-2">{featuredDealProduct.shortDescription}</p>
+                  <div className="flex items-center justify-between pt-2">
+                    <div className="flex items-baseline gap-2 font-mono">
+                      <span className="text-xl font-bold text-lime-400">Rs. {(featuredDealProduct.discountPrice || featuredDealProduct.price).toLocaleString()}</span>
+                      {featuredDealProduct.discountPrice && (
+                        <span className="text-xs text-slate-500 line-through">Rs. {featuredDealProduct.price.toLocaleString()}</span>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => setSelectedProduct(featuredDealProduct)}
+                      className="btn-accent py-1.5 px-3.5 text-xs"
+                    >
+                      View Details
+                    </button>
+                  </div>
                 </div>
               </div>
-              <span className="bg-amber-400 text-emerald-950 font-mono text-xs font-extrabold px-3 py-1.5 rounded-lg shrink-0">
-                Code: {activePromoBanner.coupon_code}
-              </span>
             </div>
           )}
-        </div>
 
-        {/* Hero Features Bar */}
-        <div className="mt-10 pt-8 border-t border-emerald-800/60 grid grid-cols-2 md:grid-cols-4 gap-4 text-xs font-semibold text-emerald-200">
-          <div className="flex items-center gap-2.5">
-            <ShieldCheck size={20} className="text-emerald-400" />
-            <span>100% Pure Organic Ingredients</span>
-          </div>
-          <div className="flex items-center gap-2.5">
-            <Truck size={20} className="text-emerald-400" />
-            <span>Fast Islandwide COD Shipping</span>
-          </div>
-          <div className="flex items-center gap-2.5">
-            <HeartPulse size={20} className="text-emerald-400" />
-            <span>Traditional Doctor Formulations</span>
-          </div>
-          <div className="flex items-center gap-2.5">
-            <RefreshCw size={20} className="text-emerald-400" />
-            <span>100% Satisfaction Guarantee</span>
-          </div>
         </div>
-
       </section>
 
-      {/* Category Pills Navigation */}
+      {/* Stitch Curated Categories Section */}
       <section className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="font-heading text-xl font-bold text-emerald-950 flex items-center gap-2">
-            <Leaf size={20} className="text-emerald-700" /> Explore Herbal Categories
-          </h2>
-          <span className="text-xs text-slate-500 font-medium">Showing {filteredProducts.length} items</span>
-        </div>
-
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
-          {categories.map((cat) => {
-            const isActive = selectedCategory === cat.id;
-            return (
-              <button
-                key={cat.id}
-                onClick={() => setSelectedCategory(cat.id)}
-                className={`px-4 py-2.5 rounded-2xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-2 border ${
-                  isActive
-                    ? 'bg-emerald-900 text-white border-emerald-900 shadow-md scale-[1.02]'
-                    : 'bg-white text-slate-700 border-slate-200 hover:border-emerald-300 hover:bg-emerald-50/50'
-                }`}
-              >
-                <span>{cat.icon}</span>
-                <span>{cat.name}</span>
-              </button>
-            );
-          })}
+        <h2 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
+          🌿 Curated Categories
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="glass-card p-6 rounded-2xl border border-white/10 hover:border-lime-500/40 transition-all cursor-pointer" onClick={() => setSelectedCategory('Ayurvedic Teas')}>
+            <span className="text-2xl mb-2 block">🍵</span>
+            <h3 className="text-lg font-bold text-white">Artisan Teas</h3>
+            <p className="text-xs text-slate-400 mt-1">Soothing herbal tea blends for every moment of your day.</p>
+          </div>
+          <div className="glass-card p-6 rounded-2xl border border-white/10 hover:border-lime-500/40 transition-all cursor-pointer" onClick={() => setSelectedCategory('Herbal Oils')}>
+            <span className="text-2xl mb-2 block">🧴</span>
+            <h3 className="text-lg font-bold text-white">Essential Oils</h3>
+            <p className="text-xs text-slate-400 mt-1">Concentrated botanical extracts & traditional hair elixirs.</p>
+          </div>
+          <div className="glass-card p-6 rounded-2xl border border-white/10 hover:border-lime-500/40 transition-all cursor-pointer" onClick={() => setSelectedCategory('Wellness Capsules')}>
+            <span className="text-2xl mb-2 block">💊</span>
+            <h3 className="text-lg font-bold text-white">Daily Supplements</h3>
+            <p className="text-xs text-slate-400 mt-1">Targeted wellness capsules, Gotukola & Ashwagandha roots.</p>
+          </div>
         </div>
       </section>
 
-      {/* Search, Filter & Sort Control Bar */}
-      <section className="bg-white p-4 rounded-2xl border border-emerald-100 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+      {/* Product Catalog Controls & Grid */}
+      <section id="catalog" className="space-y-8">
         
-        {/* Mobile Search */}
-        <div className="relative flex-1">
-          <input
-            type="text"
-            placeholder="Search by product name, ingredients or benefits..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-700 font-medium"
-          />
-          <Search size={16} className="absolute left-3 top-2.5 text-slate-400" />
-        </div>
-
-        {/* Filter Switches */}
-        <div className="flex items-center gap-4 flex-wrap">
+        {/* Category Pills & Filters */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-[#1d2022]/80 backdrop-blur-md p-4 rounded-2xl border border-white/10">
           
-          <label className="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={onlyDiscounts}
-              onChange={(e) => setOnlyDiscounts(e.target.checked)}
-              className="w-4 h-4 rounded text-emerald-800 focus:ring-emerald-600 border-slate-300"
-            />
-            <span className="bg-amber-100 text-amber-900 px-2 py-0.5 rounded text-[11px] font-bold">
-              Discounted Offers Only
-            </span>
-          </label>
-
-          <div className="flex items-center gap-2 text-xs">
-            <Filter size={14} className="text-slate-400" />
-            <span className="font-bold text-slate-600">Sort By:</span>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="bg-slate-50 border border-slate-200 text-slate-800 text-xs font-semibold rounded-xl p-2 focus:outline-none focus:ring-2 focus:ring-emerald-700"
+          <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto pb-2 md:pb-0 scrollbar-none">
+            <button
+              onClick={() => setSelectedCategory('All')}
+              className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+                selectedCategory === 'All'
+                  ? 'bg-lime-500 text-emerald-950 font-bold shadow-lg'
+                  : 'bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white border border-white/5'
+              }`}
             >
-              <option value="featured">Featured Herbal Products</option>
-              <option value="price-low">Price: Low to High</option>
-              <option value="price-high">Price: High to Low</option>
-              <option value="rating">Highest Customer Rating</option>
-            </select>
+              🌿 All Remedies ({products.length})
+            </button>
+            {categories.map((cat) => {
+              const count = products.filter((p) => p.category === cat.name).length;
+              return (
+                <button
+                  key={cat.id}
+                  onClick={() => setSelectedCategory(cat.name)}
+                  className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+                    selectedCategory === cat.name
+                      ? 'bg-lime-500 text-emerald-950 font-bold shadow-lg'
+                      : 'bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white border border-white/5'
+                  }`}
+                >
+                  {cat.icon} {cat.name} ({count})
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Sort & Discount Checkbox */}
+          <div className="flex items-center gap-4 shrink-0 w-full md:w-auto justify-between md:justify-end">
+            <label className="flex items-center gap-2 text-xs font-medium text-slate-300 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={onlyDiscounted}
+                onChange={(e) => setOnlyDiscounted(e.target.checked)}
+                className="w-4 h-4 accent-lime-500 rounded cursor-pointer"
+              />
+              <span>On Sale Only</span>
+            </label>
+
+            <div className="flex items-center gap-2 text-xs text-slate-300">
+              <ArrowUpDown size={14} className="text-lime-400" />
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="bg-[#101415] text-white border border-white/15 rounded-xl px-3 py-1.5 text-xs focus:outline-none focus:border-lime-500 cursor-pointer"
+              >
+                <option value="featured">Sort by: Featured</option>
+                <option value="price-low">Price: Low to High</option>
+                <option value="price-high">Price: High to Low</option>
+                <option value="rating">Top Customer Rated</option>
+              </select>
+            </div>
           </div>
 
         </div>
 
-      </section>
-
-      {/* Products Grid */}
-      <section>
-        {filteredProducts.length === 0 ? (
-          <div className="text-center py-16 bg-white rounded-3xl border border-emerald-100 p-8 shadow-sm">
-            <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Leaf size={32} />
-            </div>
-            <h3 className="font-heading font-bold text-xl text-slate-900 mb-2">No matching products found</h3>
-            <p className="text-xs text-slate-500 max-w-sm mx-auto mb-6">
-              Try adjusting your search terms or clearing the discount filter to browse all items in HerbalMart.
-            </p>
-            <button
-              onClick={() => {
-                setSearchQuery('');
-                setSelectedCategory('all');
-                setOnlyDiscounts(false);
-              }}
-              className="btn-secondary text-xs px-5 py-2.5 rounded-xl font-bold"
-            >
-              Reset Filters & Show All
-            </button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Product Grid */}
+        {filteredProducts.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredProducts.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}
           </div>
+        ) : (
+          <div className="text-center py-16 glass-card rounded-2xl border border-white/10 space-y-4">
+            <Filter size={40} className="mx-auto text-slate-500" />
+            <h3 className="text-lg font-bold text-white">No Herbal Remedies Found</h3>
+            <p className="text-xs text-slate-400 max-w-sm mx-auto">
+              We couldn't find any products matching your current search or category filter. Try clearing filters.
+            </p>
+            <button
+              onClick={() => {
+                setSelectedCategory('All');
+                setSearchQuery('');
+                setOnlyDiscounted(false);
+              }}
+              className="btn-secondary text-xs"
+            >
+              Reset All Filters
+            </button>
+          </div>
         )}
+
       </section>
 
     </div>

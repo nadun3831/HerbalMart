@@ -1,58 +1,53 @@
 # HerbalMart — Design System & Style Guide
 
 ## 1. Brand Aesthetics & Visual Identity
-HerbalMart embodies organic wellness, modern ayurvedic elegance, and natural vitality. The visual design combines deep rich botanical greens with warm honey-gold accents, clean typography, soft elevated cards, and subtle micro-interactions.
+**Verdant Glass Forest** embodies a technological-organic wellness aesthetic. It combines deep emerald night forest tones, multi-layered frosted glass surfaces, luminous outer glows, vibrant lime primary call-to-actions, and crisp typography to create a high-end digital wellness experience.
 
 ---
 
 ## 2. Color Palette & Tokens
 
-### 2.1 Primary Botanical Greens
-- **Primary Deep Green**: `#1b4332` — Headers, major buttons, footer background.
-- **Forest Green**: `#2d6a4f` — Hover states, primary interactive elements.
-- **Botanical Sage**: `#52b788` — Active badges, progress indicators, highlights.
-- **Soft Mint**: `#d8f3dc` — Card highlights, active tab fills, success pills.
-- **Pale Leaf Tint**: `#f0fdf4` — Background section tinting.
+### 2.1 Dark Mode Surfaces & Base
+- **Surface Background**: `#101415` — Deep charcoal night backdrop.
+- **Surface Container**: `#1d2022` — Frosted container base.
+- **Surface Container High**: `#272a2c` — Active section / elevated container.
+- **Deep Emerald**: `#064e3b` — Foundation forest tone.
 
-### 2.2 Warm Earthy Accents
-- **Warm Ayurvedic Gold**: `#d4a373` — Premium tags, discount highlights, rating stars.
-- **Honey Amber**: `#e9c46a` — Sale badges, warning notifications, price callouts.
-- **Earthy Terracotta**: `#e76f51` — Delete actions, high discount tags, hot deal banners.
+### 2.2 Accent & Brand Colors
+- **Vibrant Lime**: `#84cc16` — Primary CTAs, active badges, discount highlights, glowing focus states.
+- **Luminous Mint (Primary Tint)**: `#95d3ba` — Secondary accents, headings highlight, progress bars.
+- **Moss Dark**: `#365314` — Subtle container fills and category tags.
+- **Sage Mist**: `#94a3b8` — Metadata, breadcrumbs, SKU labels, secondary descriptions.
 
-### 2.3 Neutrals & Backgrounds
-- **Body Background**: `#f8faf8` — Light clean organic backdrop.
-- **Card Background**: `#ffffff` — Crisp white cards with soft drop-shadow.
-- **Glassmorphism Overlay**: `rgba(255, 255, 255, 0.85)` with `backdrop-filter: blur(12px)`.
-- **Dark Surface (Admin & Night Theme)**: `#0f231a` — Deep forest night mode background.
-- **Text Dark Primary**: `#1a2b22` — Deep slate-green for maximum readability.
-- **Text Muted**: `#64748b` — Subtitles, metadata, and breadcrumbs.
+### 2.3 Glassmorphism Tokens
+- **Glass Background (`glass-bg`)**: `rgba(15, 23, 42, 0.65)`
+- **Glass Border (`glass-border`)**: `rgba(255, 255, 255, 0.15)`
+- **Backdrop Blur**: `24px`
+- **Glass Hover Glow**: `0 0 20px rgba(132, 204, 22, 0.25)` with border `rgba(255, 255, 255, 0.3)`
 
 ---
 
 ## 3. Typography Rules
-- **Display & Headings**: `Playfair Display`, serif — conveys natural heritage and premium herbal authenticity.
-- **Body & UI Elements**: `Plus Jakarta Sans` or `Inter`, sans-serif — ultra-readable, modern, clean.
+- **Font Family**: `Inter`, system-ui, sans-serif
+- **Headline XL**: 48px / 700 / -0.02em letter spacing
+- **Headline LG**: 32px / 600 / -0.01em letter spacing
+- **Body MD**: 16px / 400 / 24px line height
+- **Label CAPS**: 12px / 600 / 0.05em letter spacing uppercase
 
 ---
 
 ## 4. UI Components & Patterns
 
 ### 4.1 Buttons
-- **Primary Action**: Deep Green (`#1b4332`) gradient to Forest (`#2d6a4f`), white text, rounded 12px, soft box shadow `0 4px 14px rgba(27, 67, 50, 0.25)`.
-- **Secondary / Soft**: Soft Mint fill (`#d8f3dc`) with Deep Green text.
-- **Accent / Gold**: Warm Gold (`#d4a373`) for special promotional actions.
+- **Primary Action Button**: Solid Vibrant Lime (`#84cc16`) with Dark Emerald (`#003829`) text for maximum pop and contrast. Rounded pill / 12px corners.
+- **Secondary Button**: Glass-styled with 15% white border and crisp white text.
+- **Accent Badge**: 10% opacity lime background with 100% lime text.
 
-### 4.2 Product & Metric Cards
-- 16px border-radius, soft border `1px solid rgba(45, 106, 79, 0.1)`.
-- Hover effect: `transform: translateY(-4px)`, shadow expands to `0 12px 24px rgba(0, 0, 0, 0.08)`.
-- Strikethrough original prices with clear honey/terracotta discount badge.
+### 4.2 Product Cards
+- Glass background with `backdrop-filter: blur(20px)`.
+- 1px border at 15% white opacity.
+- Hover effect: border transitions to 30% opacity with subtle lime glow (`0 0 20px rgba(132, 204, 22, 0.25)`).
 
-### 4.3 Navigation & Tabs
-- Glassmorphic top navigation bar with search bar and quick cart counter badge.
-- Role Switcher toggle bar (Customer View vs Admin Dashboard) seamlessly accessible.
-
----
-
-## 5. Layout & Responsive Grid
-- Responsive 12-column grid.
-- Mobile friendly with touch-optimized touch targets and responsive navigation drawer.
+### 4.3 Analytics & Charts
+- Transparent backgrounds sitting inside frosted glass panels.
+- Line/Area charts rendered in Luminous Mint (`#95d3ba`) and Vibrant Lime (`#84cc16`).

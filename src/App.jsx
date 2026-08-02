@@ -15,11 +15,11 @@ const MainContent = () => {
   const [searchQuery, setSearchQuery] = useState('');
 
   return (
-    <div className="min-h-screen flex flex-col justify-between bg-[#f8faf8]">
+    <div className="min-h-screen flex flex-col justify-between bg-transparent text-[#e0e3e5] selection:bg-lime-500 selection:text-black">
       <div>
         <Navbar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
 
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
           {role === 'customer' ? (
             customerTab === 'store' ? (
               <CustomerStorefront searchQuery={searchQuery} setSearchQuery={setSearchQuery} />

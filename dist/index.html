@@ -1,19 +1,45 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌿</text></svg>" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>HerbalMart — Natural Ayurvedic & Herbal Store</title>
+    <title>HerbalMart — Verdant Glass Forest Edition</title>
     <meta name="description" content="Discover authentic herbal oils, teas, powders, and wellness products at HerbalMart. Fresh, natural, and direct to your doorstep." />
-    <!-- Google Fonts -->
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            colors: {
+              forest: {
+                bg: '#101415',
+                card: '#1d2022',
+                cardHigh: '#272a2c',
+                emerald: '#064e3b',
+                lime: '#84cc16',
+                mint: '#95d3ba',
+                moss: '#365314',
+                sage: '#94a3b8'
+              }
+            },
+            fontFamily: {
+              sans: ['Inter', 'system-ui', 'sans-serif']
+            }
+          }
+        }
+      }
+    </script>
+    <!-- Google Fonts: Inter & Playfair Display -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <script type="module" crossorigin src="/assets/index-CoPvx4qN.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-D5I2uJw2.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+    <script type="module" crossorigin src="/assets/index-BfKmVoRv.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-_lIOYasb.css">
   </head>
-  <body>
+  <body class="bg-[#101415] text-[#e0e3e5] antialiased">
     <div id="root"></div>
   </body>
 </html>
