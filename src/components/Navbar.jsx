@@ -1,11 +1,11 @@
 import React from 'react';
 import { useStore } from '../data/store';
-import { ShoppingCart, Search, Leaf, Shield, UserCheck, Sparkles, SlidersHorizontal } from 'lucide-react';
+import { ShoppingCart, Search, Leaf, LogOut, Sparkles, User } from 'lucide-react';
 
 export const Navbar = ({ searchQuery, setSearchQuery }) => {
-  const { role, setRole, customerTab, setCustomerTab, cart, setIsCartOpen } = useStore();
+  const { role, customerTab, setCustomerTab, cart, setIsCartOpen, loggedInUser, logout } = useStore();
 
-  const totalCartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+  const totalCartCount = cart.reduce((sum, item) => sum + (item.quantity || 1), 0);
 
   return (
     <header className="sticky top-0 z-50 glass-nav border-b border-white/10">
@@ -13,7 +13,7 @@ export const Navbar = ({ searchQuery, setSearchQuery }) => {
         <div className="flex items-center justify-between h-20">
           
           {/* Brand Logo */}
-          <div className="flex items-center gap-3 cursor-pointer" onClick={() => { setRole('customer'); setCustomerTab('store'); }}>
+          <div className="flex items-center gap-3 cursor-pointer" onClick={() => { if (role === 'customer') setCustomerTab('store'); }}>
             <div className="w-11 h-11 rounded-xl bg-emerald-950 border border-lime-500/40 flex items-center justify-center text-lime-400 shadow-[0_0_15px_rgba(132,204,22,0.25)]">
               <Leaf size={24} />
             </div>
@@ -41,33 +41,9 @@ export const Navbar = ({ searchQuery, setSearchQuery }) => {
             </div>
           )}
 
-          {/* Actions & Role Switcher */}
-          <div className="flex items-center gap-4">
+          {/* Actions */}
+          <div className="flex items-center gap-3">
             
-            {/* Role Switcher Pill */}
-            <div className="flex items-center bg-[#1d2022] p-1 rounded-xl border border-white/10">
-              <button
-                onClick={() => { setRole('customer'); setCustomerTab('store'); }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                  role === 'customer'
-                    ? 'bg-lime-500 text-emerald-950 shadow-md font-bold'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <UserCheck size={14} /> Storefront
-              </button>
-              <button
-                onClick={() => setRole('admin')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                  role === 'admin'
-                    ? 'bg-emerald-800 text-lime-300 border border-lime-500/40 shadow-md font-bold'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <Shield size={14} /> Admin Portal
-              </button>
-            </div>
-
             {/* Customer Navigation Tabs */}
             {role === 'customer' && (
               <div className="flex items-center gap-2">
@@ -96,10 +72,32 @@ export const Navbar = ({ searchQuery, setSearchQuery }) => {
                 >
                   <ShoppingCart size={20} className="text-lime-400" />
                   {totalCartCount > 0 && (
-                    <span className="absolute -top-1.5 -right-1.5 bg-lime-500 text-emerald-950 font-extrabold text-[11px] w-5.5 h-5.5 rounded-full flex items-center justify-center border-2 border-[#101415] shadow-lg">
+                    <span className="absolute -top-1.5 -right-1.5 bg-lime-500 text-emerald-950 font-extrabold text-[11px] w-5 h-5 rounded-full flex items-center justify-center border-2 border-[#101415] shadow-lg">
                       {totalCartCount}
                     </span>
                   )}
+                </button>
+              </div>
+            )}
+
+            {/* Logged-in User Info & Logout */}
+            {loggedInUser && (
+              <div className="flex items-center gap-2 ml-2 pl-2 border-l border-white/10">
+                <div className="flex items-center gap-2 bg-[#1d2022] px-3 py-1.5 rounded-xl border border-white/10">
+                  <div className="w-7 h-7 rounded-lg bg-emerald-950 flex items-center justify-center text-sm">
+                    {loggedInUser.avatar || <User size={14} />}
+                  </div>
+                  <div className="hidden sm:block">
+                    <p className="text-xs font-bold text-white leading-none">{loggedInUser.name}</p>
+                    <p className="text-[10px] text-slate-400 leading-none mt-0.5 capitalize">{loggedInUser.role}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={logout}
+                  className="p-2 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors"
+                  title="Sign Out"
+                >
+                  <LogOut size={18} />
                 </button>
               </div>
             )}

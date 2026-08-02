@@ -5,14 +5,25 @@ import { Footer } from './components/Footer';
 import { CustomerStorefront } from './views/CustomerStorefront';
 import { CustomerDashboard } from './views/CustomerDashboard';
 import { AdminDashboard } from './views/AdminDashboard';
+import { LoginPage } from './views/LoginPage';
 import { ProductDetailModal } from './components/ProductDetailModal';
 import { CartDrawer } from './components/CartDrawer';
 import { CheckoutModal } from './components/CheckoutModal';
 import { Toast } from './components/Toast';
 
 const MainContent = () => {
-  const { role, customerTab } = useStore();
+  const { role, customerTab, isLoggedIn } = useStore();
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Show Login Page if not authenticated
+  if (!isLoggedIn) {
+    return (
+      <div className="min-h-screen bg-transparent text-[#e0e3e5]">
+        <LoginPage />
+        <Toast />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col justify-between bg-transparent text-[#e0e3e5] selection:bg-lime-500 selection:text-black">
