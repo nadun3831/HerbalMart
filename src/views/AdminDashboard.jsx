@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { useStore } from '../data/store';
 import { AreaChart, Area, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { BarChart3, Package, Tag, ShoppingBag, Plus, Edit, Trash2, ShieldAlert, CheckCircle2, TrendingUp, DollarSign, Clock, AlertTriangle } from 'lucide-react';
+import { BarChart3, Package, Tag, ShoppingBag, Plus, Edit, Trash2, ShieldAlert, TrendingUp, DollarSign, AlertTriangle, Upload, Link as LinkIcon, Image as ImageIcon, Check } from 'lucide-react';
 
 export const AdminDashboard = () => {
   const { products, salesAnalytics, orders, activeDiscounts, adminTab, setAdminTab, addProduct, updateProduct, deleteProduct, updateOrderStatus, addDiscount, toggleDiscountStatus } = useStore();
 
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
+  const [imageInputMode, setImageInputMode] = useState('url'); // 'url' | 'file'
+  const [dragActive, setDragActive] = useState(false);
   const [productForm, setProductForm] = useState({
     name: '',
     category: 'Herbal Oils',
@@ -34,6 +36,21 @@ export const AdminDashboard = () => {
   const lowStockCount = products.filter((p) => p.stock <= 5).length;
   const activeCampaignsCount = activeDiscounts.filter((d) => d.active).length;
 
+  const handleOpenAddProduct = () => {
+    setEditingProduct(null);
+    setProductForm({
+      name: '',
+      category: 'Herbal Oils',
+      price: '',
+      discountPrice: '',
+      stock: '10',
+      shortDescription: '',
+      ingredients: '',
+      image: 'https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?auto=format&fit=crop&w=600&q=80'
+    });
+    setIsProductModalOpen(true);
+  };
+
   const handleOpenEditProduct = (prod) => {
     setEditingProduct(prod);
     setProductForm({
@@ -42,11 +59,40 @@ export const AdminDashboard = () => {
       price: prod.price,
       discountPrice: prod.discountPrice || '',
       stock: prod.stock,
-      shortDescription: prod.shortDescription,
-      ingredients: prod.ingredients.join(', '),
-      image: prod.image
+      shortDescription: prod.shortDescription || '',
+      ingredients: Array.isArray(prod.ingredients) ? prod.ingredients.join(', ') : prod.ingredients || '',
+      image: prod.image || ''
     });
     setIsProductModalOpen(true);
+  };
+
+  // Handle File Upload (Drag & Drop or File Select)
+  const handleFileUpload = (file) => {
+    if (!file || !file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setProductForm((prev) => ({ ...prev, image: e.target.result }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleDrag = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === 'dragenter' || e.type === 'dragover') {
+      setDragActive(true);
+    } else if (e.type === 'dragleave') {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleFileUpload(e.dataTransfer.files[0]);
+    }
   };
 
   const handleSaveProduct = (e) => {
@@ -56,7 +102,7 @@ export const AdminDashboard = () => {
       price: parseFloat(productForm.price),
       discountPrice: productForm.discountPrice ? parseFloat(productForm.discountPrice) : null,
       stock: parseInt(productForm.stock, 10),
-      ingredients: productForm.ingredients.split(',').map((i) => i.trim()),
+      ingredients: productForm.ingredients ? productForm.ingredients.split(',').map((i) => i.trim()) : [],
       rating: editingProduct ? editingProduct.rating : 4.8,
       reviewsCount: editingProduct ? editingProduct.reviewsCount : 12,
       status: 'active'
@@ -137,7 +183,6 @@ export const AdminDashboard = () => {
       {/* TAB 1: ANALYTICS */}
       {adminTab === 'analytics' && (
         <div className="space-y-8">
-          
           {/* KPI Metrics */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             <div className="glass-card p-6 rounded-2xl border border-lime-500/30 space-y-2">
@@ -181,8 +226,6 @@ export const AdminDashboard = () => {
 
           {/* Charts Row */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            
-            {/* Sales Revenue Chart */}
             <div className="lg:col-span-8 glass-card p-6 rounded-2xl space-y-4">
               <h3 className="font-bold text-white text-base">Monthly Sales Revenue Trend</h3>
               <div className="h-72 w-full">
@@ -203,7 +246,6 @@ export const AdminDashboard = () => {
               </div>
             </div>
 
-            {/* Category Pie Chart */}
             <div className="lg:col-span-4 glass-card p-6 rounded-2xl space-y-4">
               <h3 className="font-bold text-white text-base">Category Sales Breakdown</h3>
               <div className="h-56 w-full">
@@ -230,9 +272,7 @@ export const AdminDashboard = () => {
                 ))}
               </div>
             </div>
-
           </div>
-
         </div>
       )}
 
@@ -242,7 +282,7 @@ export const AdminDashboard = () => {
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-bold text-white">Herbal Product Inventory & Catalog</h2>
             <button
-              onClick={() => { setEditingProduct(null); setIsProductModalOpen(true); }}
+              onClick={handleOpenAddProduct}
               className="btn-primary text-xs"
             >
               <Plus size={16} /> Add New Herbal Product
@@ -391,29 +431,116 @@ export const AdminDashboard = () => {
       {/* Product Add/Edit Modal */}
       {isProductModalOpen && (
         <div className="modal-overlay">
-          <div className="modal-content p-6 space-y-6">
-            <h3 className="text-xl font-bold text-white border-b border-white/10 pb-4">
-              {editingProduct ? 'Edit Herbal Product' : 'Add New Herbal Product'}
-            </h3>
+          <div className="modal-content p-6 space-y-6 max-w-2xl">
+            <div className="flex justify-between items-center border-b border-white/10 pb-4">
+              <h3 className="text-xl font-bold text-white">
+                {editingProduct ? 'Edit Herbal Product' : 'Add New Herbal Product'}
+              </h3>
+              <button
+                onClick={() => setIsProductModalOpen(false)}
+                className="text-slate-400 hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
 
             <form onSubmit={handleSaveProduct} className="space-y-4 text-xs">
+              
+              {/* Product Photo Upload Section (URL link vs Drag & Drop File) */}
+              <div className="space-y-2 bg-[#101415] p-4 rounded-2xl border border-white/10">
+                <div className="flex justify-between items-center">
+                  <label className="text-slate-200 font-bold flex items-center gap-1.5 text-xs">
+                    <ImageIcon size={16} className="text-lime-400" /> Product Image / Photo
+                  </label>
+                  <div className="flex items-center gap-1 bg-[#1d2022] p-1 rounded-xl border border-white/10">
+                    <button
+                      type="button"
+                      onClick={() => setImageInputMode('url')}
+                      className={`px-3 py-1 rounded-lg text-[11px] font-semibold flex items-center gap-1 transition-all ${
+                        imageInputMode === 'url' ? 'bg-lime-500 text-emerald-950 font-bold' : 'text-slate-400'
+                      }`}
+                    >
+                      <LinkIcon size={12} /> Image URL Link
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setImageInputMode('file')}
+                      className={`px-3 py-1 rounded-lg text-[11px] font-semibold flex items-center gap-1 transition-all ${
+                        imageInputMode === 'file' ? 'bg-lime-500 text-emerald-950 font-bold' : 'text-slate-400'
+                      }`}
+                    >
+                      <Upload size={12} /> Upload Photo File
+                    </button>
+                  </div>
+                </div>
+
+                {imageInputMode === 'url' ? (
+                  <div className="space-y-2">
+                    <input
+                      type="url"
+                      placeholder="Paste image URL (e.g. https://images.unsplash.com/...)"
+                      value={productForm.image}
+                      onChange={(e) => setProductForm({ ...productForm, image: e.target.value })}
+                      className="w-full bg-[#1d2022] text-white p-3 rounded-xl border border-white/15 focus:outline-none focus:border-lime-500 font-mono"
+                    />
+                  </div>
+                ) : (
+                  <div
+                    onDragEnter={handleDrag}
+                    onDragLeave={handleDrag}
+                    onDragOver={handleDrag}
+                    onDrop={handleDrop}
+                    className={`relative border-2 border-dashed rounded-2xl p-6 text-center transition-all cursor-pointer ${
+                      dragActive ? 'border-lime-500 bg-lime-500/10' : 'border-white/20 bg-[#1d2022] hover:border-lime-500/50'
+                    }`}
+                  >
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => e.target.files && handleFileUpload(e.target.files[0])}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    />
+                    <Upload size={28} className="mx-auto text-lime-400 mb-2" />
+                    <p className="font-bold text-white">Drag & drop your photo file here</p>
+                    <p className="text-[11px] text-slate-400 mt-1">or click to browse local image (PNG, JPG, WEBP)</p>
+                  </div>
+                )}
+
+                {/* Live Image Preview */}
+                {productForm.image && (
+                  <div className="flex items-center gap-4 pt-2 border-t border-white/10">
+                    <div className="w-16 h-16 rounded-xl overflow-hidden bg-emerald-950 shrink-0 border border-lime-500/40">
+                      <img src={productForm.image} alt="Preview" className="w-full h-full object-cover" />
+                    </div>
+                    <div className="text-[11px] text-slate-300 space-y-0.5">
+                      <p className="font-semibold text-lime-400 flex items-center gap-1">
+                        <Check size={12} /> Image Preview Loaded
+                      </p>
+                      <p className="text-slate-500 line-clamp-1 font-mono">{productForm.image.substring(0, 60)}...</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Name & Category */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-slate-300">Product Name</label>
+                  <label className="text-slate-300 font-medium">Product Name</label>
                   <input
                     type="text"
                     required
+                    placeholder="e.g. Organic Gotukola Extract"
                     value={productForm.name}
                     onChange={(e) => setProductForm({ ...productForm, name: e.target.value })}
                     className="w-full bg-[#101415] text-white p-3 rounded-xl border border-white/15 focus:outline-none focus:border-lime-500"
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-slate-300">Category</label>
+                  <label className="text-slate-300 font-medium">Category</label>
                   <select
                     value={productForm.category}
                     onChange={(e) => setProductForm({ ...productForm, category: e.target.value })}
-                    className="w-full bg-[#101415] text-white p-3 rounded-xl border border-white/15 focus:outline-none focus:border-lime-500"
+                    className="w-full bg-[#101415] text-white p-3 rounded-xl border border-white/15 focus:outline-none focus:border-lime-500 cursor-pointer"
                   >
                     <option value="Herbal Oils">Herbal Oils</option>
                     <option value="Ayurvedic Teas">Ayurvedic Teas</option>
@@ -424,31 +551,35 @@ export const AdminDashboard = () => {
                 </div>
               </div>
 
+              {/* Price, Discount Price, Stock */}
               <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-1">
-                  <label className="text-slate-300">Regular Price (Rs.)</label>
+                  <label className="text-slate-300 font-medium">Regular Price (Rs.)</label>
                   <input
                     type="number"
                     required
+                    placeholder="2500"
                     value={productForm.price}
                     onChange={(e) => setProductForm({ ...productForm, price: e.target.value })}
                     className="w-full bg-[#101415] text-white p-3 rounded-xl border border-white/15 focus:outline-none focus:border-lime-500 font-mono"
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-slate-300">Discount Price (Rs.)</label>
+                  <label className="text-slate-300 font-medium">Discount Price (Rs.)</label>
                   <input
                     type="number"
+                    placeholder="1950 (Optional)"
                     value={productForm.discountPrice}
                     onChange={(e) => setProductForm({ ...productForm, discountPrice: e.target.value })}
                     className="w-full bg-[#101415] text-white p-3 rounded-xl border border-white/15 focus:outline-none focus:border-lime-500 font-mono"
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-slate-300">Stock Quantity</label>
+                  <label className="text-slate-300 font-medium">Stock Quantity</label>
                   <input
                     type="number"
                     required
+                    placeholder="15"
                     value={productForm.stock}
                     onChange={(e) => setProductForm({ ...productForm, stock: e.target.value })}
                     className="w-full bg-[#101415] text-white p-3 rounded-xl border border-white/15 focus:outline-none focus:border-lime-500 font-mono"
@@ -456,22 +587,26 @@ export const AdminDashboard = () => {
                 </div>
               </div>
 
+              {/* Short Description */}
               <div className="space-y-1">
-                <label className="text-slate-300">Short Description</label>
+                <label className="text-slate-300 font-medium">Short Description</label>
                 <textarea
                   required
                   rows={2}
+                  placeholder="Pure organic botanical formula..."
                   value={productForm.shortDescription}
                   onChange={(e) => setProductForm({ ...productForm, shortDescription: e.target.value })}
                   className="w-full bg-[#101415] text-white p-3 rounded-xl border border-white/15 focus:outline-none focus:border-lime-500"
                 />
               </div>
 
+              {/* Ingredients */}
               <div className="space-y-1">
-                <label className="text-slate-300">Ingredients (comma separated)</label>
+                <label className="text-slate-300 font-medium">Ingredients (comma separated)</label>
                 <input
                   type="text"
                   required
+                  placeholder="Gotukola, Sesame Oil, Vetiver"
                   value={productForm.ingredients}
                   onChange={(e) => setProductForm({ ...productForm, ingredients: e.target.value })}
                   className="w-full bg-[#101415] text-white p-3 rounded-xl border border-white/15 focus:outline-none focus:border-lime-500"
@@ -482,8 +617,8 @@ export const AdminDashboard = () => {
                 <button type="button" onClick={() => setIsProductModalOpen(false)} className="btn-secondary">
                   Cancel
                 </button>
-                <button type="submit" className="btn-primary">
-                  Save Product
+                <button type="submit" className="btn-primary font-bold">
+                  {editingProduct ? 'Update Product' : 'Add Product to Store'}
                 </button>
               </div>
             </form>
