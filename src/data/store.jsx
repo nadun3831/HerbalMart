@@ -1,66 +1,59 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { INITIAL_PRODUCTS, INITIAL_CATEGORIES, INITIAL_DISCOUNTS, INITIAL_ORDERS, SALES_ANALYTICS_DATA, USER_PROFILE_DATA } from './initialData';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import {
+  apiGetProducts,
+  apiGetDiscounts,
+  apiGetOrders,
+  apiGetCart,
+  apiAddToCart,
+  apiUpdateCartItem,
+  apiRemoveCartItem,
+  apiClearCart,
+  apiCreateProduct,
+  apiUpdateProduct,
+  apiDeleteProduct,
+  apiPlaceOrder,
+  apiUpdateOrderStatus,
+  apiCreateDiscount,
+  apiToggleDiscount,
+  apiDeleteDiscount,
+  apiValidateDiscount,
+  apiLogout,
+  apiGetAnalytics,
+} from './api';
+import { INITIAL_CATEGORIES, SALES_ANALYTICS_DATA, USER_PROFILE_DATA } from './initialData';
 
 const StoreContext = createContext();
-const DATA_VERSION = '2';
 
 export const StoreProvider = ({ children }) => {
-  // Clear stale localStorage if data schema has changed
-  if (localStorage.getItem('herbal_data_version') !== DATA_VERSION) {
-    localStorage.removeItem('herbal_products');
-    localStorage.removeItem('herbal_discounts');
-    localStorage.removeItem('herbal_orders');
-    localStorage.removeItem('herbal_cart');
-    localStorage.setItem('herbal_data_version', DATA_VERSION);
-  }
-
-  const [isLoggedIn, setIsLoggedIn] = useState(() => localStorage.getItem('herbal_logged_in') === 'true');
+  // ── Auth state (persisted in localStorage) ──────────────────────────
+  const [isLoggedIn, setIsLoggedIn] = useState(
+    () => localStorage.getItem('herbal_logged_in') === 'true'
+  );
   const [loggedInUser, setLoggedInUser] = useState(() => {
     try {
       const saved = localStorage.getItem('herbal_user');
       return saved ? JSON.parse(saved) : null;
-    } catch { return null; }
+    } catch {
+      return null;
+    }
   });
-  const [role, setRole] = useState(() => localStorage.getItem('herbal_role') || 'customer');
+  const [role, setRole] = useState(
+    () => localStorage.getItem('herbal_role') || 'customer'
+  );
+
+  // ── UI navigation state ─────────────────────────────────────────────
   const [customerTab, setCustomerTab] = useState('store');
   const [adminTab, setAdminTab] = useState('analytics');
 
-  const [products, setProducts] = useState(() => {
-    try {
-      const saved = localStorage.getItem('herbal_products');
-      return saved ? JSON.parse(saved) : INITIAL_PRODUCTS;
-    } catch {
-      return INITIAL_PRODUCTS;
-    }
-  });
+  // ── Data state (fetched from API) ───────────────────────────────────
+  const [products, setProducts] = useState([]);
+  const [discounts, setDiscounts] = useState([]);
+  const [orders, setOrders] = useState([]);
+  const [cart, setCart] = useState([]);
+  const [analyticsData, setAnalyticsData] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const [discounts, setDiscounts] = useState(() => {
-    try {
-      const saved = localStorage.getItem('herbal_discounts');
-      return saved ? JSON.parse(saved) : INITIAL_DISCOUNTS;
-    } catch {
-      return INITIAL_DISCOUNTS;
-    }
-  });
-
-  const [orders, setOrders] = useState(() => {
-    try {
-      const saved = localStorage.getItem('herbal_orders');
-      return saved ? JSON.parse(saved) : INITIAL_ORDERS;
-    } catch {
-      return INITIAL_ORDERS;
-    }
-  });
-
-  const [cart, setCart] = useState(() => {
-    try {
-      const saved = localStorage.getItem('herbal_cart');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
-
+  // ── UI state ────────────────────────────────────────────────────────
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -68,6 +61,13 @@ export const StoreProvider = ({ children }) => {
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [toast, setToast] = useState(null);
 
+  // ── Toast helper ────────────────────────────────────────────────────
+  const showToast = useCallback((message, type = 'success') => {
+    setToast({ message, type, id: Date.now() });
+    setTimeout(() => setToast(null), 3000);
+  }, []);
+
+  // ── Persist auth state ──────────────────────────────────────────────
   useEffect(() => {
     localStorage.setItem('herbal_role', role);
   }, [role]);
@@ -84,171 +84,300 @@ export const StoreProvider = ({ children }) => {
     }
   }, [loggedInUser]);
 
+  // ── Data normalizers (snake_case API → camelCase UI) ─────────────────
+  const normalizeProduct = (p) => ({
+    ...p,
+    discountPrice: p.discount_price ?? p.discountPrice ?? null,
+    shortDescription: p.short_description ?? p.shortDescription ?? '',
+    stockQty: p.stock_qty ?? p.stock ?? 0,
+    reviewsCount: p.reviews_count ?? p.reviewsCount ?? 0,
+    usageInstructions: p.usage_info ?? p.usageInstructions ?? '',
+    healthBenefits: p.health_benefits ?? p.healthBenefits ?? [],
+  });
+
+  const normalizeDiscount = (d) => ({
+    ...d,
+    coupon_code: d.coupon_code ?? d.code,
+    validTill: d.valid_till ?? d.validTill ?? '',
+    name: d.name ?? d.title,
+  });
+
+  const normalizeOrder = (o) => ({
+    ...o,
+    customerName: o.customer_name ?? o.customerName ?? '',
+    total_amount: o.total_amount ?? o.total ?? 0,
+    items: o.items || [],
+  });
+
+  const normalizeCartItem = (item) => {
+    // API cart items come with nested product via `with('product')`
+    const product = item.product ? normalizeProduct(item.product) : {};
+    return {
+      ...product,
+      cartItemId: item.id,
+      id: item.product_id || product.id,
+      quantity: item.quantity,
+    };
+  };
+
+  // ── Fetch data from API when logged in ──────────────────────────────
+  const fetchProducts = useCallback(async () => {
+    try {
+      const data = await apiGetProducts();
+      setProducts(data.map(normalizeProduct));
+    } catch (err) {
+      console.error('Failed to fetch products:', err);
+    }
+  }, []);
+
+  const fetchDiscounts = useCallback(async () => {
+    try {
+      const data = await apiGetDiscounts();
+      setDiscounts(data.map(normalizeDiscount));
+    } catch (err) {
+      console.error('Failed to fetch discounts:', err);
+    }
+  }, []);
+
+  const fetchOrders = useCallback(async () => {
+    try {
+      const data = await apiGetOrders();
+      setOrders(data.map(normalizeOrder));
+    } catch (err) {
+      console.error('Failed to fetch orders:', err);
+    }
+  }, []);
+
+  const fetchCart = useCallback(async () => {
+    try {
+      const data = await apiGetCart();
+      setCart(data.map(normalizeCartItem));
+    } catch (err) {
+      console.error('Failed to fetch cart:', err);
+    }
+  }, []);
+
+  const fetchAnalytics = useCallback(async () => {
+    try {
+      const data = await apiGetAnalytics();
+      setAnalyticsData(data);
+    } catch (err) {
+      console.error('Failed to fetch analytics:', err);
+    }
+  }, []);
+
+  // Load products & discounts (public) on mount, and cart/orders if logged in
   useEffect(() => {
-    localStorage.setItem('herbal_products', JSON.stringify(products));
-  }, [products]);
+    fetchProducts();
+    fetchDiscounts();
+  }, [fetchProducts, fetchDiscounts]);
 
   useEffect(() => {
-    localStorage.setItem('herbal_discounts', JSON.stringify(discounts));
-  }, [discounts]);
+    if (isLoggedIn) {
+      fetchCart();
+      fetchOrders();
+      if (role === 'admin') {
+        fetchAnalytics();
+      }
+    }
+  }, [isLoggedIn, role, fetchCart, fetchOrders, fetchAnalytics]);
 
-  useEffect(() => {
-    localStorage.setItem('herbal_orders', JSON.stringify(orders));
-  }, [orders]);
-
-  useEffect(() => {
-    localStorage.setItem('herbal_cart', JSON.stringify(cart));
-  }, [cart]);
-
-  // Auth actions
+  // ── Auth actions ────────────────────────────────────────────────────
   const login = (userData) => {
     setLoggedInUser(userData);
     setRole(userData.role);
     setIsLoggedIn(true);
     setCustomerTab('store');
     showToast(`Welcome back, ${userData.name}!`);
+    // Refresh data from API
+    fetchProducts();
+    fetchDiscounts();
+    fetchCart();
+    fetchOrders();
+    if (userData.role === 'admin') {
+      fetchAnalytics();
+    }
   };
 
-  const logout = () => {
+  const logout = async () => {
+    await apiLogout();
     setIsLoggedIn(false);
     setLoggedInUser(null);
     setRole('customer');
     setCustomerTab('store');
+    setCart([]);
+    setOrders([]);
     localStorage.removeItem('herbal_logged_in');
     localStorage.removeItem('herbal_user');
+    localStorage.removeItem('herbal_token');
     showToast('You have been logged out.', 'info');
   };
 
-  const showToast = (message, type = 'success') => {
-    setToast({ message, type, id: Date.now() });
-    setTimeout(() => setToast(null), 3000);
+  // ── Cart Actions (API-backed) ───────────────────────────────────────
+  const addToCart = async (product, qty = 1) => {
+    try {
+      await apiAddToCart(product.id, qty);
+      await fetchCart();
+      showToast(`Added '${product.name}' to cart!`);
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
   };
 
-  // Cart Actions
-  const addToCart = (product, qty = 1) => {
-    setCart((prev) => {
-      const existing = prev.find((item) => item.id === product.id);
-      if (existing) {
-        return prev.map((item) =>
-          item.id === product.id ? { ...item, quantity: item.quantity + qty } : item
-        );
-      }
-      return [...prev, { ...product, quantity: qty }];
-    });
-    showToast(`Added '${product.name}' to cart!`);
-  };
-
-  const updateCartQuantity = (productId, newQuantity) => {
+  const updateCartQuantity = async (cartItemId, newQuantity) => {
     if (newQuantity <= 0) {
-      removeFromCart(productId);
+      removeFromCart(cartItemId);
       return;
     }
-    setCart((prev) =>
-      prev.map((item) => (item.id === productId ? { ...item, quantity: newQuantity } : item))
-    );
-  };
-
-  const updateCartQty = (productId, delta) => {
-    const existing = cart.find((item) => item.id === productId);
-    if (existing) {
-      updateCartQuantity(productId, existing.quantity + delta);
+    try {
+      await apiUpdateCartItem(cartItemId, newQuantity);
+      await fetchCart();
+    } catch (err) {
+      showToast(err.message, 'error');
     }
   };
 
-  const removeFromCart = (productId) => {
-    setCart((prev) => prev.filter((item) => item.id !== productId));
-    showToast('Removed item from cart.', 'info');
+  const updateCartQty = async (cartItemId, delta) => {
+    const existing = cart.find((item) => item.id === cartItemId);
+    if (existing) {
+      await updateCartQuantity(cartItemId, existing.quantity + delta);
+    }
   };
 
-  const clearCart = () => {
-    setCart([]);
-    setAppliedCoupon(null);
+  const removeFromCart = async (cartItemId) => {
+    try {
+      await apiRemoveCartItem(cartItemId);
+      await fetchCart();
+      showToast('Removed item from cart.', 'info');
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
   };
 
-  const applyCoupon = (code) => {
-    const clean = code.trim().toUpperCase();
-    const found = discounts.find((d) => (d.code === clean || d.coupon_code === clean) && d.active);
-    if (found) {
-      setAppliedCoupon(found);
-      showToast(`Coupon '${clean}' applied successfully!`);
-      return { success: true, message: 'Coupon applied!' };
+  const clearCart = async () => {
+    try {
+      await apiClearCart();
+      setCart([]);
+      setAppliedCoupon(null);
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  };
+
+  const applyCoupon = async (code) => {
+    try {
+      const result = await apiValidateDiscount(code.trim().toUpperCase());
+      if (result.valid) {
+        setAppliedCoupon(result.discount);
+        showToast(`Coupon '${code.trim().toUpperCase()}' applied successfully!`);
+        return { success: true, message: 'Coupon applied!' };
+      }
+    } catch (err) {
+      return { success: false, message: err.message || 'Invalid or expired coupon code.' };
     }
     return { success: false, message: 'Invalid or expired coupon code.' };
   };
 
   const applyCouponCode = applyCoupon;
 
-  // Product Actions
-  const addProduct = (newProd) => {
-    const created = {
-      ...newProd,
-      id: `prod-${Date.now()}`,
-      status: 'active',
-      stock_qty: newProd.stock,
-      discount_price: newProd.discountPrice
-    };
-    setProducts((prev) => [created, ...prev]);
-    showToast(`Added '${newProd.name}' to catalog!`);
-  };
-
-  const updateProduct = (id, updatedFields) => {
-    setProducts((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, ...updatedFields } : p))
-    );
-    showToast(`Updated product details!`);
-  };
-
-  const saveProduct = (prodData) => {
-    if (prodData.id) {
-      updateProduct(prodData.id, prodData);
-    } else {
-      addProduct(prodData);
+  // ── Product Actions (Admin, API-backed) ─────────────────────────────
+  const addProduct = async (newProd) => {
+    try {
+      await apiCreateProduct(newProd);
+      await fetchProducts();
+      showToast(`Added '${newProd.name}' to catalog!`);
+    } catch (err) {
+      showToast(err.message, 'error');
     }
   };
 
-  const deleteProduct = (id) => {
-    setProducts((prev) => prev.filter((p) => p.id !== id));
-    showToast('Product removed from catalog.', 'info');
+  const updateProduct = async (id, updatedFields) => {
+    try {
+      await apiUpdateProduct(id, updatedFields);
+      await fetchProducts();
+      showToast('Updated product details!');
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
   };
 
-  // Discount Actions
-  const addDiscount = (disc) => {
-    const created = {
-      ...disc,
-      id: `disc-${Date.now()}`,
-      active: true,
-      status: 'active',
-      coupon_code: disc.code
-    };
-    setDiscounts((prev) => [created, ...prev]);
-    showToast(`Discount '${disc.code}' created!`);
+  const saveProduct = async (prodData) => {
+    if (prodData.id) {
+      await updateProduct(prodData.id, prodData);
+    } else {
+      await addProduct(prodData);
+    }
+  };
+
+  const deleteProduct = async (id) => {
+    try {
+      await apiDeleteProduct(id);
+      await fetchProducts();
+      showToast('Product removed from catalog.', 'info');
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  };
+
+  // ── Discount Actions (Admin, API-backed) ────────────────────────────
+  const addDiscount = async (disc) => {
+    try {
+      await apiCreateDiscount({
+        code: disc.code,
+        percentage: disc.percentage,
+        title: disc.title || disc.name,
+        description: disc.description,
+        valid_till: disc.validTill || disc.valid_till,
+      });
+      await fetchDiscounts();
+      showToast(`Discount '${disc.code}' created!`);
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
   };
 
   const createDiscount = addDiscount;
 
-  const toggleDiscountStatus = (id) => {
-    setDiscounts((prev) =>
-      prev.map((d) => (d.id === id ? { ...d, active: !d.active, status: d.active ? 'disabled' : 'active' } : d))
-    );
+  const toggleDiscountStatus = async (id) => {
+    try {
+      await apiToggleDiscount(id);
+      await fetchDiscounts();
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
   };
 
-  const deleteDiscount = (id) => {
-    setDiscounts((prev) => prev.filter((d) => d.id !== id));
+  const deleteDiscount = async (id) => {
+    try {
+      await apiDeleteDiscount(id);
+      await fetchDiscounts();
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
   };
 
-  // Order Actions
-  const addOrder = (order) => {
-    setOrders((prev) => [order, ...prev]);
-    showToast(`Order placed successfully!`, 'success');
+  // ── Order Actions (API-backed) ──────────────────────────────────────
+  const addOrder = async (order) => {
+    try {
+      await apiPlaceOrder(order);
+      await fetchOrders();
+      await fetchCart(); // Cart is cleared server-side after order
+      showToast('Order placed successfully!', 'success');
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
   };
 
   const placeOrder = addOrder;
 
-  const updateOrderStatus = (orderId, status) => {
-    setOrders((prev) =>
-      prev.map((o) => (o.id === orderId ? { ...o, status } : o))
-    );
-    showToast(`Order #${orderId} status updated to '${status}'.`, 'info');
+  const updateOrderStatus = async (orderId, status) => {
+    try {
+      await apiUpdateOrderStatus(orderId, status);
+      await fetchOrders();
+      showToast(`Order #${orderId} status updated to '${status}'.`, 'info');
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
   };
 
   return (
@@ -279,10 +408,11 @@ export const StoreProvider = ({ children }) => {
         setIsCheckoutOpen,
         isProductModalOpen,
         setIsProductModalOpen,
-        salesAnalytics: SALES_ANALYTICS_DATA,
-        userProfile: USER_PROFILE_DATA,
+        salesAnalytics: analyticsData || SALES_ANALYTICS_DATA,
+        userProfile: loggedInUser || USER_PROFILE_DATA,
         toast,
         showToast,
+        isLoading,
         addToCart,
         updateCartQuantity,
         updateCartQty,
@@ -300,7 +430,12 @@ export const StoreProvider = ({ children }) => {
         deleteDiscount,
         addOrder,
         placeOrder,
-        updateOrderStatus
+        updateOrderStatus,
+        // Expose refresh functions
+        fetchProducts,
+        fetchDiscounts,
+        fetchOrders,
+        fetchCart,
       }}
     >
       {children}

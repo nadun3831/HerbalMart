@@ -30,11 +30,13 @@ export const AdminDashboard = () => {
     validTill: '2026-12-31'
   });
 
-  // Calculate KPIs
-  const totalRevenue = salesAnalytics.revenueData.reduce((sum, d) => sum + d.revenue, 0);
-  const totalOrdersCount = orders.length;
-  const lowStockCount = products.filter((p) => p.stock <= 5).length;
-  const activeCampaignsCount = activeDiscounts.filter((d) => d.active).length;
+  // Calculate KPIs (guard against missing or differently-shaped data)
+  const revenueData = salesAnalytics?.revenueData || [];
+  const categoryBreakdown = salesAnalytics?.categoryBreakdown || [];
+  const totalRevenue = salesAnalytics?.total_revenue || revenueData.reduce((sum, d) => sum + d.revenue, 0);
+  const totalOrdersCount = salesAnalytics?.total_orders || orders.length;
+  const lowStockCount = salesAnalytics?.low_stock_count || products.filter((p) => p.stock <= 5).length;
+  const activeCampaignsCount = salesAnalytics?.active_discounts || activeDiscounts.filter((d) => d.active).length;
 
   const handleOpenAddProduct = () => {
     setEditingProduct(null);
@@ -57,9 +59,9 @@ export const AdminDashboard = () => {
       name: prod.name,
       category: prod.category,
       price: prod.price,
-      discountPrice: prod.discountPrice || '',
+      discountPrice: prod.discountPrice || prod.discount_price || '',
       stock: prod.stock,
-      shortDescription: prod.shortDescription || '',
+      shortDescription: prod.shortDescription || prod.short_description || '',
       ingredients: Array.isArray(prod.ingredients) ? prod.ingredients.join(', ') : prod.ingredients || '',
       image: prod.image || ''
     });
@@ -230,7 +232,7 @@ export const AdminDashboard = () => {
               <h3 className="font-bold text-white text-base">Monthly Sales Revenue Trend</h3>
               <div className="h-72 w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={salesAnalytics.revenueData}>
+                  <AreaChart data={revenueData}>
                     <defs>
                       <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#84cc16" stopOpacity={0.4}/>
@@ -251,8 +253,8 @@ export const AdminDashboard = () => {
               <div className="h-56 w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie data={salesAnalytics.categoryBreakdown} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70}>
-                      {salesAnalytics.categoryBreakdown.map((entry, index) => (
+                    <Pie data={categoryBreakdown} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70}>
+                      {categoryBreakdown.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
@@ -261,7 +263,7 @@ export const AdminDashboard = () => {
                 </ResponsiveContainer>
               </div>
               <div className="space-y-1.5 text-xs">
-                {salesAnalytics.categoryBreakdown.map((cat, idx) => (
+                {categoryBreakdown.map((cat, idx) => (
                   <div key={idx} className="flex items-center justify-between text-slate-300">
                     <span className="flex items-center gap-2">
                       <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COLORS[idx % COLORS.length] }} />
@@ -309,13 +311,13 @@ export const AdminDashboard = () => {
                         <img src={p.image} alt={p.name} className="w-10 h-10 rounded-lg object-cover bg-emerald-950" />
                         <div>
                           <div className="font-bold text-white">{p.name}</div>
-                          <div className="text-[11px] text-slate-400 line-clamp-1">{p.shortDescription}</div>
+                          <div className="text-[11px] text-slate-400 line-clamp-1">{p.shortDescription || p.short_description}</div>
                         </div>
                       </td>
                       <td className="p-4 font-mono text-lime-400">{p.category}</td>
-                      <td className="p-4 font-mono text-slate-300">Rs. {p.price.toLocaleString()}</td>
+                      <td className="p-4 font-mono text-slate-300">Rs. {Number(p.price).toLocaleString()}</td>
                       <td className="p-4 font-mono text-lime-400 font-bold">
-                        {p.discountPrice ? `Rs. ${p.discountPrice.toLocaleString()}` : '-'}
+                        {(p.discountPrice || p.discount_price) ? `Rs. ${Number(p.discountPrice || p.discount_price).toLocaleString()}` : '-'}
                       </td>
                       <td className="p-4">
                         <span className={`px-2.5 py-1 rounded-full font-bold text-[11px] ${
@@ -371,7 +373,7 @@ export const AdminDashboard = () => {
                 <p className="text-xs text-slate-300">{discount.description}</p>
                 <div className="flex justify-between text-xs text-slate-400 pt-2 border-t border-white/10 font-mono">
                   <span>Discount: {discount.percentage}% OFF</span>
-                  <span>Valid till: {discount.validTill}</span>
+                  <span>Valid till: {discount.validTill || discount.valid_till}</span>
                 </div>
               </div>
             ))}
@@ -400,9 +402,9 @@ export const AdminDashboard = () => {
                 {orders.map((o) => (
                   <tr key={o.id} className="hover:bg-white/5 transition-colors">
                     <td className="p-4 font-mono font-bold text-white">{o.id}</td>
-                    <td className="p-4 text-slate-200">{o.customerName}</td>
-                    <td className="p-4">{o.items.length} items</td>
-                    <td className="p-4 font-mono text-lime-400 font-bold">Rs. {o.total.toLocaleString()}</td>
+                    <td className="p-4 text-slate-200">{o.customerName || o.customer_name}</td>
+                    <td className="p-4">{(o.items || []).length} items</td>
+                    <td className="p-4 font-mono text-lime-400 font-bold">Rs. {Number(o.total || o.total_amount || 0).toLocaleString()}</td>
                     <td className="p-4">
                       <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-lime-500/20 text-lime-400 border border-lime-500/30">
                         {o.status}

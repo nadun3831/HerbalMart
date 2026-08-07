@@ -18,10 +18,10 @@ export const CartDrawer = () => {
   const shippingFee = subtotal > 5000 ? 0 : 350;
   const grandTotal = Math.max(0, subtotal - discountAmount + shippingFee);
 
-  const handleApplyCoupon = (e) => {
+  const handleApplyCoupon = async (e) => {
     e.preventDefault();
     setCouponError(null);
-    const result = applyCoupon(couponInput);
+    const result = await applyCoupon(couponInput);
     if (!result.success) {
       setCouponError(result.message);
     }
@@ -63,7 +63,7 @@ export const CartDrawer = () => {
                       <div className="flex justify-between font-medium text-xs text-white">
                         <h4 className="font-bold">{item.name}</h4>
                         <button
-                          onClick={() => removeFromCart(item.id)}
+                          onClick={() => removeFromCart(item.cartItemId || item.id)}
                           className="text-slate-400 hover:text-rose-400 transition-colors"
                         >
                           <Trash2 size={14} />
@@ -74,11 +74,11 @@ export const CartDrawer = () => {
                       </div>
                       <div className="flex items-center gap-3 pt-2">
                         <div className="flex items-center gap-2 bg-[#1d2022] border border-white/10 px-2 py-0.5 rounded-lg text-xs">
-                          <button onClick={() => updateCartQuantity(item.id, item.quantity - 1)} className="hover:text-lime-400">
+                          <button onClick={() => updateCartQuantity(item.cartItemId || item.id, item.quantity - 1)} className="hover:text-lime-400">
                             <Minus size={12} />
                           </button>
                           <span className="font-mono font-bold w-4 text-center">{item.quantity}</span>
-                          <button onClick={() => updateCartQuantity(item.id, item.quantity + 1)} className="hover:text-lime-400">
+                          <button onClick={() => updateCartQuantity(item.cartItemId || item.id, item.quantity + 1)} className="hover:text-lime-400">
                             <Plus size={12} />
                           </button>
                         </div>

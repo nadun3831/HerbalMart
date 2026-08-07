@@ -6,8 +6,8 @@ import confetti from 'canvas-confetti';
 export const CheckoutModal = () => {
   const { isCheckoutOpen, setIsCheckoutOpen, cart, clearCart, appliedCoupon, addOrder, userProfile } = useStore();
 
-  const [shippingAddress, setShippingAddress] = useState(userProfile.address);
-  const [phone, setPhone] = useState(userProfile.phone);
+  const [shippingAddress, setShippingAddress] = useState(userProfile?.address || '');
+  const [phone, setPhone] = useState(userProfile?.phone || '');
   const [paymentMethod, setPaymentMethod] = useState('cod');
   const [orderSuccess, setOrderSuccess] = useState(false);
 
@@ -18,20 +18,18 @@ export const CheckoutModal = () => {
   const shippingFee = subtotal > 5000 ? 0 : 350;
   const grandTotal = Math.max(0, subtotal - discountAmount + shippingFee);
 
-  const handleSubmitOrder = (e) => {
+  const handleSubmitOrder = async (e) => {
     e.preventDefault();
-    const newOrder = {
-      id: `ORD-${Math.floor(1000 + Math.random() * 9000)}`,
-      date: new Date().toISOString().split('T')[0],
-      customerName: userProfile.name,
-      items: cart,
-      total: grandTotal,
-      status: 'Pending',
-      paymentMethod
+    const orderPayload = {
+      items: cart.map((item) => ({
+        product_id: item.id,
+        quantity: item.quantity,
+      })),
+      shipping_address: shippingAddress,
+      phone: phone,
     };
 
-    addOrder(newOrder);
-    clearCart();
+    await addOrder(orderPayload);
     setOrderSuccess(true);
 
     confetti({

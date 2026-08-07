@@ -19,7 +19,7 @@ class ProductSeeder extends Seeder
                 'rating' => 4.9,
                 'reviews_count' => 128,
                 'status' => 'active',
-                'image' => 'https://images.unsplash.com/photo-1608248597263-00079e96047a?auto=format&fit=crop&w=600&q=80',
+                'image' => 'https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?auto=format&fit=crop&w=600&q=80',
                 'short_description' => 'Traditional Ayurvedic formulation enriched with Indigo and Bhringraj to reduce hair fall.',
                 'ingredients' => json_encode(['Indigofera tinctoria (Neeli)', 'Eclipta alba (Bhringraj)', 'Phyllanthus emblica (Amla)', 'Virgin Coconut Oil']),
             ],
