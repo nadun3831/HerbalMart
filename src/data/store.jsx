@@ -42,7 +42,7 @@ export const StoreProvider = ({ children }) => {
   );
 
   // ── UI navigation state ─────────────────────────────────────────────
-  const [customerTab, setCustomerTab] = useState('store');
+  const [customerTab, setCustomerTab] = useState('dashboard');
   const [adminTab, setAdminTab] = useState('analytics');
 
   // ── Data state (fetched from API) ───────────────────────────────────
@@ -59,6 +59,7 @@ export const StoreProvider = ({ children }) => {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
   const [toast, setToast] = useState(null);
 
   // ── Toast helper ────────────────────────────────────────────────────
@@ -408,6 +409,8 @@ export const StoreProvider = ({ children }) => {
         setIsCheckoutOpen,
         isProductModalOpen,
         setIsProductModalOpen,
+        showLoginModal,
+        setShowLoginModal,
         salesAnalytics: analyticsData || SALES_ANALYTICS_DATA,
         userProfile: loggedInUser || USER_PROFILE_DATA,
         toast,

@@ -5,7 +5,7 @@ import { Footer } from './components/Footer';
 import { CustomerStorefront } from './views/CustomerStorefront';
 import { CustomerDashboard } from './views/CustomerDashboard';
 import { AdminDashboard } from './views/AdminDashboard';
-import { LoginPage } from './views/LoginPage';
+import { LoginModal } from './components/LoginModal';
 import { ProductDetailModal } from './components/ProductDetailModal';
 import { CartDrawer } from './components/CartDrawer';
 import { CheckoutModal } from './components/CheckoutModal';
@@ -15,30 +15,18 @@ const MainContent = () => {
   const { role, customerTab, isLoggedIn } = useStore();
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Show Login Page if not authenticated
-  if (!isLoggedIn) {
-    return (
-      <div className="min-h-screen bg-transparent text-[#e0e3e5]">
-        <LoginPage />
-        <Toast />
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen flex flex-col justify-between bg-transparent text-[#e0e3e5] selection:bg-lime-500 selection:text-black">
       <div>
         <Navbar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
 
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
-          {role === 'customer' ? (
-            customerTab === 'store' ? (
-              <CustomerStorefront searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
-            ) : (
-              <CustomerDashboard />
-            )
-          ) : (
+          {isLoggedIn && role === 'admin' ? (
             <AdminDashboard />
+          ) : customerTab === 'store' ? (
+            <CustomerStorefront searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
+          ) : (
+            <CustomerDashboard />
           )}
         </main>
       </div>
@@ -46,6 +34,7 @@ const MainContent = () => {
       <Footer />
 
       {/* Global Modals & Notifications */}
+      <LoginModal />
       <ProductDetailModal />
       <CartDrawer />
       <CheckoutModal />

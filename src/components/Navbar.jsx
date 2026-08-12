@@ -1,9 +1,9 @@
 import React from 'react';
 import { useStore } from '../data/store';
-import { ShoppingCart, Search, Leaf, LogOut, Sparkles, User } from 'lucide-react';
+import { ShoppingCart, Search, Leaf, LogOut, Sparkles, User, LogIn } from 'lucide-react';
 
 export const Navbar = ({ searchQuery, setSearchQuery }) => {
-  const { role, customerTab, setCustomerTab, cart, setIsCartOpen, loggedInUser, logout } = useStore();
+  const { role, customerTab, setCustomerTab, cart, setIsCartOpen, loggedInUser, logout, setShowLoginModal } = useStore();
 
   const totalCartCount = cart.reduce((sum, item) => sum + (item.quantity || 1), 0);
 
@@ -13,7 +13,7 @@ export const Navbar = ({ searchQuery, setSearchQuery }) => {
         <div className="flex items-center justify-between h-20">
           
           {/* Brand Logo */}
-          <div className="flex items-center gap-3 cursor-pointer" onClick={() => { if (role === 'customer') setCustomerTab('store'); }}>
+          <div className="flex items-center gap-3 cursor-pointer" onClick={() => { if (role === 'customer') setCustomerTab('dashboard'); }}>
             <div className="w-11 h-11 rounded-xl bg-emerald-950 border border-lime-500/40 flex items-center justify-center text-lime-400 shadow-[0_0_15px_rgba(132,204,22,0.25)]">
               <Leaf size={24} />
             </div>
@@ -67,7 +67,7 @@ export const Navbar = ({ searchQuery, setSearchQuery }) => {
                 {/* Cart Drawer Trigger */}
                 <button
                   onClick={() => setIsCartOpen(true)}
-                  className="relative p-2.5 bg-[#1d2022] hover:bg-white/10 border border-white/10 rounded-xl text-slate-200 transition-all hover:border-lime-500/50"
+                  className="relative p-2.5 bg-[#1d2022] hover:bg-white/10 border border-white/10 rounded-xl text-slate-200 transition-all hover:border-lime-500/50 cursor-pointer"
                   aria-label="View Shopping Cart"
                 >
                   <ShoppingCart size={20} className="text-lime-400" />
@@ -80,8 +80,15 @@ export const Navbar = ({ searchQuery, setSearchQuery }) => {
               </div>
             )}
 
-            {/* Logged-in User Info & Logout */}
-            {loggedInUser && (
+            {/* Guest Sign In Button OR Logged-in User Profile & Logout */}
+            {!loggedInUser ? (
+              <button
+                onClick={() => setShowLoginModal(true)}
+                className="btn-primary py-2 px-4 text-xs font-bold flex items-center gap-2 shadow-[0_0_20px_rgba(132,204,22,0.3)] ml-2 cursor-pointer"
+              >
+                <LogIn size={15} /> Sign In
+              </button>
+            ) : (
               <div className="flex items-center gap-2 ml-2 pl-2 border-l border-white/10">
                 <div className="flex items-center gap-2 bg-[#1d2022] px-3 py-1.5 rounded-xl border border-white/10">
                   <div className="w-7 h-7 rounded-lg bg-emerald-950 flex items-center justify-center text-sm">
@@ -94,7 +101,7 @@ export const Navbar = ({ searchQuery, setSearchQuery }) => {
                 </div>
                 <button
                   onClick={logout}
-                  className="p-2 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors"
+                  className="p-2 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
                   title="Sign Out"
                 >
                   <LogOut size={18} />
