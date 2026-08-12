@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useStore } from '../data/store';
-import { X, CreditCard, Truck, CheckCircle2, ShieldCheck } from 'lucide-react';
+import { X, CreditCard, Truck, CheckCircle2, ShieldCheck, Leaf, Mail } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 export const CheckoutModal = () => {
@@ -9,6 +9,7 @@ export const CheckoutModal = () => {
   const [shippingAddress, setShippingAddress] = useState(userProfile?.address || '');
   const [phone, setPhone] = useState(userProfile?.phone || '');
   const [paymentMethod, setPaymentMethod] = useState('cod');
+  const [isProcessing, setIsProcessing] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
 
   if (!isCheckoutOpen) return null;
@@ -20,6 +21,8 @@ export const CheckoutModal = () => {
 
   const handleSubmitOrder = async (e) => {
     e.preventDefault();
+    setIsProcessing(true);
+
     const orderPayload = {
       items: cart.map((item) => ({
         product_id: item.id,
@@ -29,30 +32,86 @@ export const CheckoutModal = () => {
       phone: phone,
     };
 
-    await addOrder(orderPayload);
-    setOrderSuccess(true);
+    try {
+      await addOrder(orderPayload);
+      setIsProcessing(false);
+      setOrderSuccess(true);
 
-    confetti({
-      particleCount: 100,
-      spread: 70,
-      origin: { y: 0.6 }
-    });
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 }
+      });
+    } catch (err) {
+      setIsProcessing(false);
+    }
   };
 
   const handleClose = () => {
     setIsCheckoutOpen(false);
     setOrderSuccess(false);
+    setIsProcessing(false);
   };
 
   return (
     <div className="modal-overlay">
       <div className="modal-content relative p-6 sm:p-8 space-y-6">
         
-        <button onClick={handleClose} className="absolute top-6 right-6 p-2 text-slate-400 hover:text-white rounded-xl hover:bg-white/10">
-          <X size={20} />
-        </button>
+        {/* Close button - hide during processing */}
+        {!isProcessing && (
+          <button onClick={handleClose} className="absolute top-6 right-6 p-2 text-slate-400 hover:text-white rounded-xl hover:bg-white/10 cursor-pointer">
+            <X size={20} />
+          </button>
+        )}
 
-        {!orderSuccess ? (
+        {isProcessing ? (
+          /* ── PROCESSING / LOADING SCREEN ──────────────────────── */
+          <div className="text-center py-16 space-y-8">
+
+            {/* Animated Leaf Spinner */}
+            <div className="relative w-24 h-24 mx-auto">
+              {/* Outer ring pulse */}
+              <div className="absolute inset-0 rounded-full border-2 border-lime-500/20 animate-ping" style={{ animationDuration: '2s' }} />
+              {/* Spinning ring */}
+              <div className="absolute inset-0 rounded-full border-[3px] border-transparent border-t-lime-500 border-r-lime-500/40 animate-spin" style={{ animationDuration: '1.2s' }} />
+              {/* Center icon */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-16 h-16 rounded-full bg-emerald-950/80 border border-lime-500/30 flex items-center justify-center shadow-[0_0_30px_rgba(132,204,22,0.25)]">
+                  <Leaf size={28} className="text-lime-400 animate-pulse" />
+                </div>
+              </div>
+            </div>
+
+            {/* Processing Text */}
+            <div className="space-y-3">
+              <h2 className="text-xl font-bold text-white">Processing Your Order</h2>
+              <p className="text-sm text-slate-400 max-w-xs mx-auto">
+                Please wait while we confirm your order and send the receipt to your email...
+              </p>
+            </div>
+
+            {/* Animated Steps */}
+            <div className="max-w-xs mx-auto space-y-3">
+              <div className="flex items-center gap-3 bg-lime-500/10 border border-lime-500/20 rounded-xl px-4 py-3">
+                <div className="w-5 h-5 rounded-full border-2 border-lime-500 border-t-transparent animate-spin" style={{ animationDuration: '0.8s' }} />
+                <span className="text-xs font-semibold text-lime-400">Placing your order...</span>
+              </div>
+              <div className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-xl px-4 py-3">
+                <Mail size={16} className="text-slate-400 animate-pulse" />
+                <span className="text-xs font-medium text-slate-400">Sending confirmation email...</span>
+              </div>
+            </div>
+
+            {/* Bouncing dots */}
+            <div className="flex items-center justify-center gap-1.5 pt-2">
+              <span className="w-2 h-2 rounded-full bg-lime-500 animate-bounce" style={{ animationDelay: '0ms' }} />
+              <span className="w-2 h-2 rounded-full bg-lime-500 animate-bounce" style={{ animationDelay: '150ms' }} />
+              <span className="w-2 h-2 rounded-full bg-lime-500 animate-bounce" style={{ animationDelay: '300ms' }} />
+            </div>
+          </div>
+
+        ) : !orderSuccess ? (
+          /* ── CHECKOUT FORM ──────────────────────────────────── */
           <>
             <div className="space-y-1 border-b border-white/10 pb-4">
               <h2 className="text-xl font-bold text-white flex items-center gap-2">
@@ -148,7 +207,7 @@ export const CheckoutModal = () => {
                     </div>
                   </div>
 
-                  <button type="submit" className="w-full btn-primary py-3 text-xs font-bold font-sans">
+                  <button type="submit" className="w-full btn-primary py-3 text-xs font-bold font-sans cursor-pointer">
                     Confirm & Place Order
                   </button>
                 </div>
@@ -157,6 +216,7 @@ export const CheckoutModal = () => {
             </form>
           </>
         ) : (
+          /* ── SUCCESS SCREEN ──────────────────────────────────── */
           <div className="text-center py-12 space-y-6">
             <div className="w-16 h-16 rounded-full bg-lime-500/20 text-lime-400 border border-lime-500/30 flex items-center justify-center mx-auto">
               <CheckCircle2 size={36} />
@@ -164,10 +224,10 @@ export const CheckoutModal = () => {
             <div className="space-y-2">
               <h2 className="text-2xl font-bold text-white">Order Confirmed Successfully!</h2>
               <p className="text-xs text-slate-300 max-w-md mx-auto">
-                Thank you for choosing HerbalMart. Your order has been placed and is now being prepared for islandwide dispatch.
+                Thank you for choosing HerbalMart. Your order has been placed and a confirmation email has been sent to your inbox. 📧
               </p>
             </div>
-            <button onClick={handleClose} className="btn-primary px-8 py-3 text-xs font-bold">
+            <button onClick={handleClose} className="btn-primary px-8 py-3 text-xs font-bold cursor-pointer">
               Back to Storefront
             </button>
           </div>
@@ -177,3 +237,4 @@ export const CheckoutModal = () => {
     </div>
   );
 };
+

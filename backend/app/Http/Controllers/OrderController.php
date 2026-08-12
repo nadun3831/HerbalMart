@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\OrderConfirmationMail;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 
 class OrderController extends Controller
 {
@@ -75,6 +77,14 @@ class OrderController extends Controller
 
         // Clear user cart after checkout
         $user->cartItems()->delete();
+
+        // Send order confirmation email to customer
+        try {
+            Mail::to($user->email)->send(new OrderConfirmationMail($order->load('items'), $user));
+        } catch (\Exception $e) {
+            // Log the error but don't fail the order
+            \Log::warning('Order confirmation email failed: ' . $e->getMessage());
+        }
 
         return response()->json([
             'message' => 'Order placed successfully',
