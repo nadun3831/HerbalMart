@@ -412,7 +412,21 @@ export const StoreProvider = ({ children }) => {
         showLoginModal,
         setShowLoginModal,
         salesAnalytics: analyticsData || SALES_ANALYTICS_DATA,
-        userProfile: loggedInUser || USER_PROFILE_DATA,
+        userProfile: loggedInUser
+          ? {
+              name: loggedInUser.name || 'Valued Customer',
+              email: loggedInUser.email || '',
+              phone: loggedInUser.phone || '',
+              address: loggedInUser.address || '',
+              role: loggedInUser.role || 'customer',
+            }
+          : {
+              name: 'Guest User',
+              email: '',
+              phone: '',
+              address: '',
+              role: 'guest',
+            },
         toast,
         showToast,
         isLoading,

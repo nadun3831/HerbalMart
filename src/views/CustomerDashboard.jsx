@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useStore } from '../data/store';
-import { Sparkles, Copy, Check, Package, Clock, Truck, CheckCircle2, User, Mail, MapPin, Phone, ShieldCheck, Tag } from 'lucide-react';
+import { Sparkles, Copy, Check, Package, Clock, Truck, CheckCircle2, User, Mail, MapPin, Phone, ShieldCheck, Tag, LogIn, UserPlus } from 'lucide-react';
 
 export const CustomerDashboard = () => {
-  const { activeDiscounts, orders, userProfile, applyCoupon } = useStore();
+  const { activeDiscounts, orders, userProfile, isLoggedIn, setShowLoginModal, applyCoupon } = useStore();
   const [copiedCode, setCopiedCode] = useState(null);
   const [toastMsg, setToastMsg] = useState(null);
 
@@ -34,22 +34,55 @@ export const CustomerDashboard = () => {
       <div className="glass-card p-8 rounded-3xl border border-lime-500/30 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-gradient-to-r from-[#064e3b] via-[#101415] to-[#1d2022]">
         <div className="space-y-2">
           <div className="inline-flex items-center gap-2 bg-lime-500/20 text-lime-400 text-xs font-bold px-3 py-1 rounded-full border border-lime-500/30">
-            <Sparkles size={14} /> MY WELLNESS DASHBOARD
+            <Sparkles size={14} /> WELLNESS DASHBOARD
           </div>
-          <h1 className="text-3xl font-extrabold text-white">Welcome back, {userProfile.name}</h1>
+          <h1 className="text-3xl font-extrabold text-white">
+            {isLoggedIn ? `Welcome back, ${userProfile.name}` : 'Welcome to HerbalMart'}
+          </h1>
           <p className="text-xs text-slate-300">
-            Track active ayurvedic orders, claim promotional discount codes, and manage your health account.
+            {isLoggedIn
+              ? 'Track active ayurvedic orders, claim promotional discount codes, and manage your health account.'
+              : 'Claim promotional discount codes, explore ayurvedic products, and sign in to track your orders.'}
           </p>
         </div>
 
-        <div className="flex items-center gap-4 bg-emerald-950/80 p-4 rounded-2xl border border-white/10 text-xs text-slate-200 shrink-0">
-          <ShieldCheck size={28} className="text-lime-400" />
-          <div>
-            <div className="font-bold text-white">Herbal Preferred Member</div>
-            <div className="text-[11px] text-slate-400">Standard Free Shipping Status</div>
+        {isLoggedIn ? (
+          <div className="flex items-center gap-4 bg-emerald-950/80 p-4 rounded-2xl border border-white/10 text-xs text-slate-200 shrink-0">
+            <ShieldCheck size={28} className="text-lime-400" />
+            <div>
+              <div className="font-bold text-white">Herbal Preferred Member</div>
+              <div className="text-[11px] text-slate-400">Standard Free Shipping Status</div>
+            </div>
           </div>
-        </div>
+        ) : (
+          <button
+            onClick={() => setShowLoginModal(true)}
+            className="btn-primary px-5 py-3 text-xs font-bold flex items-center gap-2 shrink-0 cursor-pointer shadow-[0_0_20px_rgba(132,204,22,0.3)]"
+          >
+            <LogIn size={16} /> Sign In to Your Account
+          </button>
+        )}
       </div>
+
+      {!isLoggedIn && (
+        <div className="bg-lime-500/10 border border-lime-500/30 p-4 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 text-xs">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-lime-500/20 text-lime-400 flex items-center justify-center shrink-0">
+              <UserPlus size={20} />
+            </div>
+            <div>
+              <p className="font-bold text-white">Browsing as Guest</p>
+              <p className="text-slate-400">Sign in or create an account to view your order history and manage delivery details.</p>
+            </div>
+          </div>
+          <button
+            onClick={() => setShowLoginModal(true)}
+            className="btn-primary px-4 py-2 text-xs font-bold shrink-0 cursor-pointer"
+          >
+            Sign In / Register
+          </button>
+        </div>
+      )}
 
       {toastMsg && (
         <div className="bg-lime-500 text-emerald-950 px-4 py-3 rounded-xl text-xs font-bold flex items-center justify-between shadow-lg">
@@ -96,7 +129,7 @@ export const CustomerDashboard = () => {
                   </div>
                   <button
                     onClick={() => handleCopyCode(discount.code)}
-                    className="btn-primary py-1.5 px-3 text-xs"
+                    className="btn-primary py-1.5 px-3 text-xs cursor-pointer"
                   >
                     {copiedCode === discount.code ? (
                       <>
@@ -200,8 +233,16 @@ export const CustomerDashboard = () => {
                 })}
               </div>
             ) : (
-              <div className="glass-card p-8 text-center text-slate-400 rounded-2xl">
-                No active orders found yet.
+              <div className="glass-card p-8 text-center text-slate-400 rounded-2xl space-y-3">
+                <p>No active orders found yet.</p>
+                {!isLoggedIn && (
+                  <button
+                    onClick={() => setShowLoginModal(true)}
+                    className="btn-primary px-4 py-2 text-xs font-bold cursor-pointer"
+                  >
+                    Sign In to View Your Orders
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -215,37 +256,57 @@ export const CustomerDashboard = () => {
               <User size={18} className="text-lime-400" /> Account Profile Details
             </h2>
 
-            <div className="space-y-4 text-xs">
-              <div className="space-y-1">
-                <label className="text-slate-400 font-medium">Full Name</label>
-                <div className="flex items-center gap-2 bg-[#101415] p-3 rounded-xl text-white font-semibold border border-white/10">
-                  <User size={14} className="text-lime-400" /> {userProfile.name}
+            {isLoggedIn ? (
+              <div className="space-y-4 text-xs">
+                <div className="space-y-1">
+                  <label className="text-slate-400 font-medium">Full Name</label>
+                  <div className="flex items-center gap-2 bg-[#101415] p-3 rounded-xl text-white font-semibold border border-white/10">
+                    <User size={14} className="text-lime-400" /> {userProfile.name}
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-slate-400 font-medium">Email Address</label>
+                  <div className="flex items-center gap-2 bg-[#101415] p-3 rounded-xl text-white font-semibold border border-white/10">
+                    <Mail size={14} className="text-lime-400" /> {userProfile.email || 'Not provided'}
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-slate-400 font-medium">Contact Phone</label>
+                  <div className="flex items-center gap-2 bg-[#101415] p-3 rounded-xl text-white font-semibold border border-white/10">
+                    <Phone size={14} className="text-lime-400" /> {userProfile.phone || 'Not provided'}
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-slate-400 font-medium">Default Delivery Address</label>
+                  <div className="flex items-start gap-2 bg-[#101415] p-3 rounded-xl text-white font-semibold border border-white/10 leading-relaxed">
+                    <MapPin size={16} className="text-lime-400 shrink-0 mt-0.5" /> {userProfile.address || 'Not provided'}
+                  </div>
                 </div>
               </div>
-
-              <div className="space-y-1">
-                <label className="text-slate-400 font-medium">Email Address</label>
-                <div className="flex items-center gap-2 bg-[#101415] p-3 rounded-xl text-white font-semibold border border-white/10">
-                  <Mail size={14} className="text-lime-400" /> {userProfile.email}
+            ) : (
+              <div className="text-center py-6 space-y-4 text-xs">
+                <div className="w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mx-auto text-slate-400">
+                  <User size={24} />
                 </div>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-slate-400 font-medium">Contact Phone</label>
-                <div className="flex items-center gap-2 bg-[#101415] p-3 rounded-xl text-white font-semibold border border-white/10">
-                  <Phone size={14} className="text-lime-400" /> {userProfile.phone}
+                <div className="space-y-1">
+                  <p className="font-bold text-white">Not Signed In</p>
+                  <p className="text-slate-400 text-[11px]">Sign in to manage your profile, saved addresses, and active orders.</p>
                 </div>
+                <button
+                  onClick={() => setShowLoginModal(true)}
+                  className="w-full btn-primary py-2.5 text-xs font-bold cursor-pointer"
+                >
+                  Sign In / Create Account
+                </button>
               </div>
+            )}
 
-              <div className="space-y-1">
-                <label className="text-slate-400 font-medium">Default Delivery Address</label>
-                <div className="flex items-start gap-2 bg-[#101415] p-3 rounded-xl text-white font-semibold border border-white/10 leading-relaxed">
-                  <MapPin size={16} className="text-lime-400 shrink-0 mt-0.5" /> {userProfile.address}
-                </div>
-              </div>
-            </div>
-
-            <button className="w-full btn-secondary text-xs">Edit Profile Information</button>
+            {isLoggedIn && (
+              <button className="w-full btn-secondary text-xs cursor-pointer">Edit Profile Information</button>
+            )}
           </div>
         </div>
 
@@ -254,3 +315,4 @@ export const CustomerDashboard = () => {
     </div>
   );
 };
+
